@@ -8,8 +8,15 @@ import socket
 from dataclasses import dataclass
 from typing import Optional
 
+
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+from docx import Document
+import PyPDF2
+import pandas as pd
+from pptx import Presentation
 
 # ============================================================
 # 1) DLP KURALLARI ve TARAYICI
@@ -146,6 +153,100 @@ def clipboard_monitor():
 # 5) USB (DOSYA) İZLEYİCİ AGENT
 # ============================================================
 
+# ============================================================
+# EK DOSYA FORMAT DESTEKLERİ (DOCX, PDF, XLSX, PPTX)
+# ============================================================
+
+
+def read_file_content(path):
+    ext = os.path.splitext(path)[1].lower()
+
+    try:
+        # TXT & CSV
+        if ext in ['.txt', '.csv']:
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                return f.read()
+
+        # DOCX
+        elif ext == '.docx':
+            doc = Document(path)
+            return "\n".join(p.text for p in doc.paragraphs)
+
+        # PDF
+        elif ext == '.pdf':
+            text = ""
+            with open(path, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    text += page.extract_text() or ""
+            return text
+
+        # EXCEL (xlsx/xls)
+        elif ext in ['.xlsx', '.xls']:
+            dfs = pd.read_excel(path, sheet_name=None)
+            return "\n".join(df.to_string(index=False) for df in dfs.values())
+
+        # POWERPOINT
+        elif ext == '.pptx':
+            prs = Presentation(path)
+            text_runs = []
+            for slide in prs.slides:
+                for shape in slide.shapes:
+                    if hasattr(shape, "text"):
+                        text_runs.append(shape.text)
+            return "\n".join(text_runs)
+
+        # Desteklenmeyen
+        else:
+            return ""
+
+    except Exception as e:
+        print(f"[!] Dosya okunamadı ({path}): {e}")
+        return ""
+
+
+class USBFileHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if event.is_directory:
+            return
+
+        file_path = event.src_path
+        file_name = os.path.basename(file_path)
+        print(f"\n[USB] Yeni dosya kopyalandı: {file_name}. İçerik taranıyor...")
+
+        try:
+            content = read_file_content(file_path)
+
+            if content:
+                incidents = scan_content(content)
+
+                if incidents:
+                    detected_types = {i['data_type'] for i in incidents}
+                    data_type = ", ".join(detected_types)
+                    masked_match = incidents[0]['masked_match']
+
+                    log_incident(
+                        "USB Transferi",
+                        data_type,
+                        "ENGEL - Karantina",
+                        f"{file_name} -> {masked_match}"
+                    )
+
+                    new_path = os.path.join(QUARANTINE_DIR, file_name)
+                    shutil.move(file_path, new_path)
+                    print(f"!!! Dosya karantinaya taşındı: {new_path} !!!")
+
+                else:
+                    print(f"[USB] Dosya temiz: {file_name}")
+
+            else:
+                print(f"[USB] Dosya boş veya okunamadı: {file_name}")
+
+        except Exception as e:
+            log_incident("USB Transferi", "Hata", "İşlenmedi", f"Dosya işleme hatası: {e}")
+
+
+"""
 class USBFileHandler(FileSystemEventHandler):
     """
     SIM_USB_SURUCU klasöründe (Simüle edilmiş USB) yeni dosya oluştuğunda tetiklenir.
@@ -185,6 +286,13 @@ class USBFileHandler(FileSystemEventHandler):
 
         except Exception as e:
             log_incident("USB Transferi", "Hata", "İşlenmedi", f"Dosya işleme hatası: {e}")
+
+"""
+
+
+
+
+
 
 
 def usb_monitor():
