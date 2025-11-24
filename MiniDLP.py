@@ -40,6 +40,12 @@ MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_EXT = {".txt", ".csv", ".docx", ".pdf", ".xlsx", ".xls", ".pptx"}
 
 # ============================================================
+# USB POLICY MODE (STRICT: tüm dosyaları karantina, SMART: sadece hassas veri)
+# ============================================================
+
+USB_POLICY = "SMART"  # Varsayılan “akıllı mod”
+
+# ============================================================
 # HELPERS: TCKN / PHONE / IBAN VALIDATORS
 # ============================================================
 
@@ -429,8 +435,17 @@ class USBFileHandler(FileSystemEventHandler):
                 else:
                     print(f"[USB] Karantina başarısız: {file_path}")
             else:
-                # Policy: block all USB writes by quarantining everything (even if clean)
-                q = self._quarantine(file_path, hint_name=name)
+                if USB_POLICY == "SMART":
+                    log_incident("USB Yazma", "TEMIZ", "İZİN VERİLDİ", name)
+                    print(f"[SMART MODE] Temiz dosya USB'ye yazıldı: {name}")
+                    return   
+
+                else:
+                    q = self._quarantine(file_path, hint_name=name)
+                    if q:
+                        log_incident("USB Yazma", "Bilinmiyor", "ENGEL - Karantinaya alındı", name)
+                        print(f"[STRICT MODE] {name} karantinaya alındı (temiz olsa bile).")
+                    return
                 if q:
                     log_incident("USB Yazma", "Bilinmiyor", "ENGEL - Karantinaya alındı", name)
                     print(f"USB'ye yazma politikası: {name} karantinaya alındı (temiz olsa bile).")
@@ -825,6 +840,25 @@ def run_endpoint_dlp():
 
 
 def main_menu():
+
+    global USB_POLICY
+
+    print("------------------------------------------------")
+    print("  USB Politika Seçimi:")
+    print("    1) STRICT MODE - Her dosya karantinaya alınır")
+    print("    2) SMART MODE  - Sadece hassas içerik engellenir")
+    print("------------------------------------------------")
+
+    p = input("USB Politikasını Seç (1/2): ").strip()
+    if p == "1":
+        USB_POLICY = "STRICT"
+    elif p == "2":
+        USB_POLICY = "SMART"
+    else:
+        USB_POLICY = "SMART"  # yanlış girişte SMART çalışır
+
+    print(f"Seçilen USB Modu: {USB_POLICY}\n")
+    
     print("===================================================")
     print("   Tek Dosyalık DLP Agent Sistemi (Mini Proje)     ")
     print("===================================================")

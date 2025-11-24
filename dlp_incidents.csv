@@ -1,2 +1,36 @@
 Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
 2025-10-26 14:30:50,Pano Kopyalama,E_POSTA,ENGEL - Pano Temizlendi,<E_POSTA tespit edildi>
+2025-11-24 20:59:36,USB Transferi,E_POSTA,ENGEL - Karantina,temiz.txt -> EMAIL: <d***@...>
+2025-11-24 20:59:36,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,test.txt
+2025-11-24 21:01:26,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | sa
+2025-11-24 21:01:28,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | as
+2025-11-24 21:01:43,chat Mesajı,TEL_NO,ENGEL - Mesaj gönderilmedi,SENDER_PC->RECEIVER_PC | TEL: ******54
+2025-11-24 21:01:48,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | porno
+2025-11-24 21:01:50,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | sa
+2025-11-24 21:06:54,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | py MiniDLP.py
+2025-11-24 21:06:55,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | py MiniDLP.py
+2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,firmware-amd-graphics_20250808-1_all.deb
+2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,WPSettings.dat
+2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,IndexerVolumeGuid
+2025-11-24 21:08:15,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764007176_test.txt
+2025-11-24 21:08:16,USB Transferi,E_POSTA,ENGEL - Karantina,1764007176_temiz.txt -> EMAIL: <d***@...>
+2025-11-24 21:08:22,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764007638_firmware-amd-graphics_20250808-1_all.deb
+2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,WPSettings.dat
+2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,IndexerVolumeGuid
+2025-11-24 21:18:45,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
+2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,temiz.txt
+2025-11-24 21:24:03,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
+2025-11-24 21:36:01,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
+2025-11-24 21:36:02,USB Yazma,TEMIZ,İZİN VERİLDİ,temiz.txt
+2025-11-24 21:36:02,USB Transferi,Hata,İşlenmedi,Dosya işleme hatası: cannot access local variable 'q' where it is not associated with a value
+2025-11-24 21:41:55,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,temiz.txt
+2025-11-24 21:42:21,USB Transferi,TEL_NO,ENGEL - Karantina,1764009361_hassas.txt -> TEL: ******16
+2025-11-24 21:42:21,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764009715_temiz.txt
+2025-11-24 21:42:21,USB Transferi,TEL_NO,ENGEL - Karantina,1764008325_hassas.txt -> TEL: ******16
+2025-11-24 21:42:21,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764008325_temiz.txt
+2025-11-24 21:42:22,USB Transferi,TEL_NO,ENGEL - Karantina,1764008643_hassas.txt -> TEL: ******16
+2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009741_1764009361_hassas.txt -> TEL: ******16
+2025-11-24 21:42:38,USB Yazma,TEMIZ,İZİN VERİLDİ,1764009741_1764009715_temiz.txt
+2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009742_1764008643_hassas.txt -> TEL: ******16
+2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009741_1764008325_hassas.txt -> TEL: ******16
+2025-11-24 21:42:38,USB Yazma,TEMIZ,İZİN VERİLDİ,1764009741_1764008325_temiz.txt
