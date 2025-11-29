@@ -1,0 +1,9 @@
+{
+    "SCAN_RULES": {
+        "TCKN": true,
+        "TEL_NO": true,
+        "IBAN_TR": true,
+        "KREDI_KARTI": true,
+        "E_POSTA": true
+    }
+}

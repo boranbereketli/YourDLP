@@ -14,6 +14,9 @@ import string
 from dataclasses import dataclass
 from typing import Optional
 from types import SimpleNamespace
+import requests
+import json
+
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -39,6 +42,33 @@ os.makedirs(SIM_USB_DIR, exist_ok=True)
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_EXT = {".txt", ".csv", ".docx", ".pdf", ".xlsx", ".xls", ".pptx"}
 
+CONFIG_FILE = "dlp_config.json"
+
+# Varsayılan SCAN_RULES
+SCAN_RULES = {
+    "TCKN": True,
+    "TEL_NO": True,
+    "IBAN_TR": True,
+    "KREDI_KARTI": True,
+    "E_POSTA": True
+}
+
+# Config dosyası varsa üzerinden güncelle
+if os.path.exists(CONFIG_FILE):
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            SCAN_RULES.update(data.get("SCAN_RULES", {}))
+        print("[Config] dlp_config.json yüklendi.")
+    except Exception:
+        print("[Config] dlp_config.json okunamadı, varsayılan ayarlar kullanılıyor.")
+else:
+    # Yoksa otomatik oluştur
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump({"SCAN_RULES": SCAN_RULES}, f, indent=4)
+    print("[Config] Varsayılan dlp_config.json oluşturuldu.")
+
+
 # ============================================================
 # USB POLICY MODE (STRICT: tüm dosyaları karantinaya alır, SMART: sadece hassas veri içerenleri karantinaya alır)
 # ============================================================
@@ -55,8 +85,17 @@ BANNED_WORDS = set()  # runtime'da eklenecek
 # HELPERS: TCKN / PHONE / IBAN VALIDATORS
 # ============================================================
 
+# ==== Policy Server ile entegre değişkenler ====
 
+USB_SCAN_ON_MODIFY = True     # USB değişiklikte taransın mı?
 
+CLIPBOARD_ENABLED = True      # True / False
+USB_ENABLED       = True      # True / False
+NETWORK_ENABLED   = True      # True / False
+
+# Policy Server URL
+POLICY_URL = "http://127.0.0.1:5000/get_policy/PC1"
+# ============================================================
 
 def is_valid_tckn(tckn: str) -> bool:
     """
@@ -194,6 +233,24 @@ DLP_RULES = {
     }
 }
 
+# ==========================
+# MONITOR STARTER FUNCTIONS
+# ==========================
+
+def start_clipboard_monitor():
+    t = threading.Thread(target=clipboard_monitor, daemon=True)
+    t.start()
+    print("[DLP] Clipboard monitor başlatıldı.")
+
+def start_usb_monitor():
+    t = threading.Thread(target=usb_monitor, daemon=True)
+    t.start()
+    print("[DLP] USB monitor başlatıldı.")
+
+def start_network_monitor():
+    print("[DLP] Network DLP henüz entegre edilmedi (stub).")
+    # ileride: sender + gateway + receiver otomatik başlatılabilir
+
 
 def scan_content(content: str):
     """
@@ -243,9 +300,11 @@ def scan_content(content: str):
     # 3) IBAN, CC, EMAIL — NORMAL REGEX TARAMASI
     # =========================================================
     for dtype, rule in DLP_RULES.items():
-        if dtype in ("TEL_NO", "TCKN"):  
-            continue  
-
+        if not SCAN_RULES.get(dtype, True):   # pasifse bu rule atlanır
+            continue
+        if dtype in ("TEL_NO", "TCKN"):
+            continue
+  
         regex = re.compile(rule["pattern"])
         for match in regex.findall(text):
             m = match if isinstance(match, str) else "".join(match)
@@ -830,6 +889,84 @@ def run_receiver():
         conn.close()
         server_sock.close()
 
+def fetch_policy():
+    global USB_POLICY, USB_SCAN_ON_MODIFY
+    global CLIPBOARD_ENABLED, USB_ENABLED, NETWORK_ENABLED
+    global BANNED_WORDS, SCAN_RULES
+
+    try:
+        r = requests.get(POLICY_URL, timeout=3).json()
+
+        if "error" in r:
+            print("[Policy] Sunucu 'unknown endpoint' dedi!")
+            return False
+
+        # --- USB & Features ---
+        USB_POLICY = r.get("usb_policy", USB_POLICY)
+        USB_SCAN_ON_MODIFY = r.get("scan_on_modify", True)
+        features = r.get("features", {})
+        CLIPBOARD_ENABLED = features.get("clipboard_enabled", CLIPBOARD_ENABLED)
+        USB_ENABLED       = features.get("usb_enabled", USB_ENABLED)
+        NETWORK_ENABLED   = features.get("network_enabled", NETWORK_ENABLED)
+
+        # --- banned words / scan rules ---
+        BANNED_WORDS = set(map(str.lower, r.get("banned_words", [])))
+        if "scan_rules" in r:
+            SCAN_RULES.update(r["scan_rules"])
+
+        # Kalıcı olarak kaydet
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump({
+                "USB_POLICY": USB_POLICY,
+                "SCAN_RULES": SCAN_RULES,
+                "BANNED_WORDS": list(BANNED_WORDS)
+            }, f, indent=4)
+        print("[Config] dlp_config.json kalıcı olarak güncellendi.")
+
+        print("\n[Policy] Policy başarıyla güncellendi!")
+        print(f"USB_POLICY        = {USB_POLICY}")
+        print(f"CLP:{CLIPBOARD_ENABLED} | USB:{USB_ENABLED} | NET:{NETWORK_ENABLED}")
+        print(f"SCAN_RULES        = {SCAN_RULES}")
+        print(f"BANNED_WORDS      = {BANNED_WORDS}")
+
+        return True
+
+    except Exception as e:
+        print("[Policy] Policy çekilemedi:", e)
+        return False
+
+    
+def update_policy_on_server(new_policy):
+    """
+    Endpoint'teki değişiklikleri Policy Server'a gönderir (POST).
+    new_policy: dict formatında policy bilgisi
+    """
+    try:
+        url = "http://127.0.0.1:5000/update_policy"  # server route
+        r = requests.post(url, json=new_policy, timeout=3)
+
+        # Sunucunun cevabını göster
+        print("\n[Policy] Sunucudan gelen cevap:")
+        try:
+            print(json.dumps(r.json(), indent=4, ensure_ascii=False))
+        except:
+            print(r.text)
+
+    except Exception as e:
+        print("[Policy ERROR]:", e)
+
+def print_current_policy():
+    print("\n=== AKTİF POLICY (Endpoint Üzerinde) ===")
+    print(f"USB_POLICY        : {USB_POLICY}")
+    print(f"USB_SCAN_ON_MODIFY: {USB_SCAN_ON_MODIFY}")
+    print(f"CLIPBOARD_ENABLED : {CLIPBOARD_ENABLED}")
+    print(f"USB_ENABLED       : {USB_ENABLED}")
+    print(f"NETWORK_ENABLED   : {NETWORK_ENABLED}")
+    print(f"BANNED_WORDS      : {list(BANNED_WORDS)}")
+    print(f"SCAN_RULES        : {SCAN_RULES}")
+    print("========================================\n")
+
+
 
 # ============================================================
 # MAIN / MENÜ
@@ -857,44 +994,43 @@ def run_endpoint_dlp():
 
 
 def main_menu():
-
-    global USB_POLICY
-
-    print("------------------------------------------------")
-    print("  USB Politika Seçimi:")
-    print("    1) STRICT MODE - Her dosya karantinaya alınır")
-    print("    2) SMART MODE  - Sadece hassas içerik engellenir")
-    print("------------------------------------------------")
-
-    p = input("USB Politikasını Seç (1/2): ").strip()
-    if p == "1":
-        USB_POLICY = "STRICT"
-    elif p == "2":
-        USB_POLICY = "SMART"
-    else:
-        USB_POLICY = "SMART"  # yanlış girişte SMART çalışır
-
-    print(f"Seçilen USB Modu: {USB_POLICY}\n")
     
+    print(f"Aktif USB Policy: {USB_POLICY}  (server veya config.json üzerinden değiştirilebilir)")
+
     print("===================================================")
     print("   Tek Dosyalık DLP Agent Sistemi (Mini Proje)     ")
     print("===================================================")
     print("Mod Seç:")
+    print("  0) Policy Server'dan policy çek (GET)")
     print("  1) Endpoint DLP (Clipboard + USB izle)")
     print("  2) Sender Agent (PC1)")
     print("  3) DLP Gateway (Aradaki AI/DLP Agent)")
     print("  4) Receiver Agent (PC2)")
     print("  5) Yasaklı kelime ekle")
-    print("  5) Yasaklı kelime ekle")
     print("  6) Yasaklı kelime kaldır")
     print("  7) Yasaklı kelimeleri listele")
+    print("  8) Tarama ayarlarını değiştir (SCAN_RULES)")
+    print("  9) Aktif policy'yi göster")
+    print(" 10) Policy sunucuya gönder (POST)")
     print("  q) Çık")
     print("===================================================\n")
 
     choice = input("Seçimin: ").strip().lower()
 
+    if choice == "0":
+        fetch_policy()
+        return main_menu()
     if choice == "1":
-        run_endpoint_dlp()
+        if CLIPBOARD_ENABLED:
+            start_clipboard_monitor()
+        if USB_ENABLED:
+            start_usb_monitor()
+        if NETWORK_ENABLED:
+            start_network_monitor()  # varsa
+        print("\n--- DLP Endpoint Başlatıldı ---")
+        print(f"Clipboard: {CLIPBOARD_ENABLED}")
+        print(f"USB:       {USB_ENABLED} ({USB_POLICY})")
+        print(f"Network:   {NETWORK_ENABLED}\n")
     elif choice == "2":
         run_sender()
     elif choice == "3":
@@ -905,16 +1041,47 @@ def main_menu():
         word = input("Eklenecek kelime: ").strip()
         add_banned_word(word)
         main_menu()
-    elif choice == "5":
-        word = input("Eklenecek kelime: ").strip()
-        add_banned_word(word)
-        main_menu()
     elif choice == "6":
         word = input("Kaldırılacak kelime: ").strip()
         remove_banned_word(word)
         main_menu()
     elif choice == "7":
         list_banned_words()
+        main_menu()
+    elif choice == "8":
+        print("\n--- Tarama Ayarları (SCAN_RULES) ---")
+        print("Mevcut Ayarlar:")
+        for rule, status in SCAN_RULES.items():
+            print(f" - {rule}: {'AKTIF' if status else 'PASIF'}")
+
+        rule = input("\nDeğiştirilecek veri tipi (örn: IBAN_TR) / q: geri çık: ").strip()
+
+        if rule in SCAN_RULES:
+            SCAN_RULES[rule] = not SCAN_RULES[rule]
+            print(f"{rule} artık {'AKTIF' if SCAN_RULES[rule] else 'PASIF'}")
+
+            # değişiklik sonrası json’a yaz
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump({"SCAN_RULES": SCAN_RULES}, f, indent=4)
+            print("[Config] dlp_config.json güncellendi.")
+
+        main_menu()
+    elif choice == "9":
+        print_current_policy()
+        main_menu()
+    elif choice == "10":
+        new_policy = {
+            "usb_policy": USB_POLICY,
+            "scan_on_modify": USB_SCAN_ON_MODIFY,
+            "features": {
+                "clipboard_enabled": CLIPBOARD_ENABLED,
+                "usb_enabled": USB_ENABLED,
+                "network_enabled": NETWORK_ENABLED
+            },
+            "banned_words": list(BANNED_WORDS),
+            "scan_rules": SCAN_RULES
+        }
+        update_policy_on_server(new_policy)
         main_menu()
     elif choice in {"q", "quit", "exit"}:
         print("Çıkılıyor...")
