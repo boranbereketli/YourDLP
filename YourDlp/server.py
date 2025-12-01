@@ -110,6 +110,19 @@ def receive_incident():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/update_policy', methods=['POST'])
+def update_policy():
+    data = request.json
+    user_id = data.get("user_id")
+    policies = data.get("policies")
+
+    if not user_id or not policies:
+        return jsonify({"error": "user_id ve policies zorunlu"}), 400
+
+    USER_POLICIES[user_id] = policies
+
+    return jsonify({"status": "ok", "message": "Policy güncellendi"}), 200
+
 
 # ============================================================
 # DLP NETWORK GATEWAY (Yeni Politika Uygulama Mantığı)
