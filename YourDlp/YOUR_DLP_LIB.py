@@ -112,12 +112,27 @@ DLP_RULES = {
 }
 
 
-def scan_content(content: str):
+def scan_content(content: str, dynamic_keywords: list = None):
     """ Tüm hassas veri tiplerini tarar ve bulunanları listeler. """
     incidents = []
     if not content: return incidents
     try: full_text = str(content)
     except Exception: full_text = ""
+    
+    upper_text = full_text.upper() 
+
+    # --- 1) DİNAMİK ANAHTAR KELİME TARAMASI ---
+    if dynamic_keywords:
+        for keyword in dynamic_keywords:
+            upper_keyword = keyword.upper()
+            if upper_keyword in upper_text:
+                # Anahtar kelimeyi 'KEYWORD_MATCH' olarak kaydet
+                incidents.append({
+                    "data_type": "KEYWORD_MATCH",
+                    "description": f"Anahtar Kelime Tespiti: {keyword}",
+                    "masked_match": f"[KEYWORD] {keyword[:15]}..."
+                })
+
 
     text_for_tel_no = list(full_text)
     
