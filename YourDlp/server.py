@@ -1,4 +1,4 @@
-# server.py
+# server.py (Revize Edilmiş)
 
 from flask import Flask, request, jsonify
 import threading
@@ -7,7 +7,6 @@ import time
 import os
 import csv
 import json
-
 from YOUR_DLP_LIB import (
     scan_content, Message, LOG_CSV, 
     DLP_SCAN_ORDER 
@@ -16,73 +15,62 @@ from YOUR_DLP_LIB import (
 app = Flask(__name__)
 
 # ============================================================
-# POLİTİKA VERİTABANI ve AYARLAR
+# YENİ POLİTİKA VERİTABANI ve AYARLAR
 # ============================================================
 
-# Politika yapısı: {user_id: {kanal: {veri_tipi: True/False (True=Yasak)}}
+# Network yapısı: {user_id: {kanal: {hedef_user_id: {veri_tipi: True/False (True=Yasak)}}}}
+# NOT: Network altında tanımlanmayan hedefler için GİZLİ varsayılan kural: SERBEST (İnceleme atlanır).
+
 USER_POLICIES = {
     # -----------------------------------------------------------------
-    # VM_USER_1 POLİTİKASI: En Kısıtlı Ajan (Test Göndericisi)
+    # VM_USER_1 POLİTİKASI: (Sadece vm_user_2'ye kısıtlı)
     # -----------------------------------------------------------------
     "vm_user_1": {
-        # Clipboard: TC, IBAN, Kredi Kartı yasak (L1, L2 testleri için)
-        "clipboard": {"TCKN": True, "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": False, "TEL_NO": False}, 
-        # USB: IBAN ve Kredi Kartı yasak (L3, L4 testleri için)
+        "clipboard": {"TCKN": True, "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": False, "TEL_NO": False,"Keywords": ["araba", "pilot"]}, 
         "usb":       {"TCKN": False, "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": False, "TEL_NO": False},  
-        # Network: TC ve IBAN yasak (N1, N2, N3 testleri için)
-        "network":   {"TCKN": True,  "IBAN_TR": True, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
+        # NETWORK: Sadece vm_user_2'ye giderken bu kısıtlamalar geçerli.
+        "network":   {
+            "vm_user_2": {"TCKN": True,  "IBAN_TR": True, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False,"Keywords": ["domates", "patates"]},
+            # Başka bir hedefe (Örn: vm_user_3) kural tanımlanmamıştır, yani serbesttir.
+        }, 
     },
     
     # -----------------------------------------------------------------
-    # VM_USER_2 POLİTİKASI: Biraz Daha Serbest Ajan (Test Alıcısı)
+    # VM_USER_2 POLİTİKASI: (Sadece vm_user_1'e kısıtlı)
     # -----------------------------------------------------------------
     "vm_user_2": {
-        # Clipboard: Tamamen serbest
         "clipboard": {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
-        # USB: Her şey yasak
         "usb":       {"TCKN": True,  "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": True, "TEL_NO": True},   
-        # Network: Sadece TC yasak (N4, N5 testleri için)
-        "network":   {"TCKN": True,  "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
+        "network":   {
+            "vm_user_1": {"TCKN": True,  "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False},
+        }, 
     },
     
     # -----------------------------------------------------------------
-    # VM_USER_3 POLİTİKASI: Ağ Muafiyeti Testi İçin
+    # VM_USER_3 POLİTİKASI: (Network Kuralı Yok -> Herkese Serbest)
     # -----------------------------------------------------------------
     "vm_user_3": {
-        # Network: Herhangi bir içerik kısıtlaması yok (Muafiyet, E1 testi için hazırlanmıştır)
-        "network":   {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
         "clipboard": {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
         "usb":       {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
+        "network":   {}, # Network altında hedef tanımlı değil -> herkese serbest
     },
     
-    # -----------------------------------------------------------------
-    # VM_USER_4 POLİTİKASI: Ağ Muafiyeti Hedefi
-    # -----------------------------------------------------------------
-    "vm_user_4": {
-        # Boş bırakılabilir, sadece hedef olarak kullanılacak
-        "network":   {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
-        "clipboard": {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
-        "usb":       {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
-    }
+    # ... vm_user_4 ve diğerleri de network altında kural tanımlanmadığı sürece serbesttir.
 }
 
-# Ağ İletişim Muafiyetleri (Gateway bu trafiği HİÇ İNCELEMEZ, doğrudan yönlendirir)
-NETWORK_DLP_EXCLUSIONS = {
-    # E1 ve E2 Testi için: vm_user_3 ve vm_user_4 arasındaki trafik inceleme dışıdır.
-    ("vm_user_3", "vm_user_4"), 
-}
-
-# Socket Ayarları (Yerel test için 127.0.0.1'de çalışacak)
+# 🚨 NETWORK_DLP_EXCLUSIONS KALDIRILDI / İhtiyaç Kalmadı
+# Socket Ayarları (Aynı kalır)
 GATEWAY_LISTEN_HOST = "127.0.0.1" 
 GATEWAY_LISTEN_PORT = 9101
 LIVE_CONNECTIONS = {}
 
 # ============================================================
-# LOGGING & REST API ENDPOINTS
+# LOGGING & REST API ENDPOINTS (Aynı kalır)
 # ============================================================
 
 def log_incident(event_type, data_type, action, details):
     """ Logları sunucu tarafında CSV dosyasına kaydeder. """
+    # ... (kod aynı kalır) ...
     log_line = f"{time.strftime('%Y-%m-%d %H:%M:%S')},{event_type},{data_type},{action},{details}\n"
     try:
         if not os.path.exists(LOG_CSV):
@@ -95,7 +83,6 @@ def log_incident(event_type, data_type, action, details):
     
     print(f"\n[SERVER LOG] {data_type} | {action} | {details}")
 
-
 @app.route('/policies/<user_id>', methods=['GET'])
 def get_policies(user_id):
     """ VM'lerin çekmesi için veri tipi bazlı politikaları döndürür """
@@ -103,13 +90,13 @@ def get_policies(user_id):
     policies = USER_POLICIES.get(user_id, {
         "clipboard": default_restrictions.copy(),
         "usb":       default_restrictions.copy(),
-        "network":   default_restrictions.copy(),
+        "network":   {d: default_restrictions.copy() for d in USER_POLICIES.keys()}, # Varsayılan olarak herkese kısıtla
     })
     return jsonify(policies)
 
 @app.route('/log_incident', methods=['POST'])
 def receive_incident():
-    """ Uç nokta ajanlarından gelen logları kaydeder """
+    # ... (kod aynı kalır) ...
     data = request.json
     try:
         details = f"User: {data.get('user_id', 'UNKNOWN')} | {data.get('details', 'No details')}"
@@ -125,14 +112,11 @@ def receive_incident():
 
 
 # ============================================================
-# DLP NETWORK GATEWAY FONKSİYONLARI (Aynı kalır)
+# DLP NETWORK GATEWAY (Yeni Politika Uygulama Mantığı)
 # ============================================================
 
-# (process_message, client_handler, run_gateway, start_server fonksiyonları 
-#  önceki yanıttaki haliyle korunmuştur.)
-
 def process_message(msg: Message):
-    """ Mesajı inceler/yönlendirir. Her zaman Gateway'den geçer. """
+    """ Mesajı inceler/yönlendirir. """
     src = msg.src
     dst = msg.dst
     
@@ -140,29 +124,52 @@ def process_message(msg: Message):
         log_incident("Ağ Mesajı", "Hata", "ENGEL - Alıcı Offline", f"{src}->{dst}")
         return False, f"[DLP] HATA: Alıcı VM ({dst}) Gateway'e bağlı değil."
 
-    if (src, dst) in NETWORK_DLP_EXCLUSIONS:
+    # Kaynak kullanıcının bu hedefe uyguladığı kısıtlamaları çek
+    # Eğer src kullanıcısının politikasında dst için özel kural yoksa, network_policy_for_dst = None döner.
+    network_policy_for_dst = USER_POLICIES.get(src, {}).get("network", {}).get(dst)
+    
+    # 1. Politika Kontrolü: İnceleme Yapılmalı mı?
+    if network_policy_for_dst is None:
+        # ➡️ Muafiyet/Serbestlik: Kaynak, bu hedefe kısıtlama tanımlamamış (Varsayılan: İzin Verilir, İnceleme Atlanır)
         log_incident(
             event_type=f"{msg.channel} Mesajı",
             data_type="YOK",
-            action="İZİN VERİLDİ - Politika Muafiyeti (İncelemesiz Yönlendirme)",
-            details=f"{src}->{dst} | İçerik taranmadı."
+            action="İZİN VERİLDİ - Hedefe Özel Kural Yok (İncelemesiz Yönlendirme)",
+            details=f"{src}->{dst} | İçerik taranmadı (Politika Tanımsız)."
         )
+        
+        # Mesajı İlet
         recipient_sock = LIVE_CONNECTIONS[dst]['socket']
         payload_to_send = f"[{src}]: {msg.payload}\n"
         recipient_sock.sendall(payload_to_send.encode("utf-8"))
         return True, "[DLP] Mesaj incelemesiz iletildi."
 
-    incidents = scan_content(msg.payload)
-    src_network_policy = USER_POLICIES.get(src, {}).get("network", {})
+      # Dinamik Anahtar Kelimeleri Çek
+    dynamic_keywords = network_policy_for_dst.get("Keywords", []) 
+
+    # 2. Hassas Veri Tarama (Hem Regex hem de Keywords aranır)
+    # 🚨 scan_content'ı yeni parametre ile çağır
+    incidents = scan_content(msg.payload, dynamic_keywords) 
     blocked_data_types = []
 
     if incidents:
+        # Tespit edilen her bir veri tipi için tanımlanmış kısıtlamayı kontrol et
         for incident in incidents:
             data_type = incident["data_type"]
-            if src_network_policy.get(data_type, False): 
+
+            # Anahtar kelime eşleşmesi ise, 'Keywords' alanının varlığı yasaktır.
+            if data_type == "KEYWORD_MATCH":
+                # Eğer Keywords listesi tanımlıysa, bu KEYWORD_MATCH her zaman yasak olarak kabul edilir
+                # (Zaten kurala girdiği için buraya gelmiştir).
+                if dynamic_keywords:
+                    blocked_data_types.append("ANAHTAR_KELİME")
+
+            # network_policy_for_dst[data_type] == True ise, yasaktır.
+            if network_policy_for_dst.get(data_type, False): 
                 blocked_data_types.append(data_type)
         
         if blocked_data_types:
+            # ⛔ ENGELLEME
             data_type_str = "/".join(set(blocked_data_types))
             log_incident(
                 event_type=f"{msg.channel} Mesajı",
@@ -172,14 +179,16 @@ def process_message(msg: Message):
             )
             return False, f"[DLP] Mesajınız yasaklanmış veri ({data_type_str}) içerdiği için engellendi."
         else:
+            # ✅ İZİN VERME (Hassas veri var ama bu hedefe gitmesi yasaklanmamış)
             log_incident(
                 event_type=f"{msg.channel} Mesajı",
                 data_type="YOK (İzin Verildi)",
                 action="İZİN VERİLDİ - Hassas Veri Politika İzni",
-                details=f"{src}->{dst} | Hassas veri var ancak {src} için yasaklı değil.",
+                details=f"{src}->{dst} | Hassas veri var ancak bu hedefe gitmesi yasaklı değil.",
             )
             
     else:
+        # Temiz mesaj
         log_incident(
             event_type=f"{msg.channel} Mesajı",
             data_type="YOK",
@@ -187,13 +196,17 @@ def process_message(msg: Message):
             details=f"{src}->{dst} | {msg.payload[:50]}...",
         )
 
+    # Mesajı İlet (Engellenmediyse)
     recipient_sock = LIVE_CONNECTIONS[dst]['socket']
     payload_to_send = f"[{src}]: {msg.payload}\n"
     recipient_sock.sendall(payload_to_send.encode("utf-8"))
     return True, "[DLP] Mesaj iletildi."
 
 
+# ... (Geri kalan client_handler, run_gateway ve start_server fonksiyonları aynı kalır)
+
 def client_handler(conn, addr):
+    # ... (Önceki yanıtta verilen kod aynı kalır) ...
     user_id = None
     try:
         conn_file = conn.makefile("r", encoding="utf-8")
@@ -238,6 +251,7 @@ def client_handler(conn, addr):
 
 
 def run_gateway():
+    # ... (Önceki yanıtta verilen kod aynı kalır) ...
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_sock.bind((GATEWAY_LISTEN_HOST, GATEWAY_LISTEN_PORT))
@@ -261,7 +275,7 @@ def run_gateway():
 
 
 def start_server():
-    # REST API ve Ağ Geçidi'ni eş zamanlı başlat
+    # ... (Önceki yanıtta verilen kod aynı kalır) ...
     gateway_thread = threading.Thread(target=run_gateway, daemon=True)
     gateway_thread.start()
     
