@@ -1,37 +1,45 @@
 Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
-2025-10-26 14:30:50,Pano Kopyalama,E_POSTA,ENGEL - Pano Temizlendi,<E_POSTA tespit edildi>
-2025-11-24 20:59:36,USB Transferi,E_POSTA,ENGEL - Karantina,temiz.txt -> EMAIL: <d***@...>
-2025-11-24 20:59:36,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,test.txt
-2025-11-24 21:01:26,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | sa
-2025-11-24 21:01:28,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | as
-2025-11-24 21:01:43,chat Mesajı,TEL_NO,ENGEL - Mesaj gönderilmedi,SENDER_PC->RECEIVER_PC | TEL: ******54
-2025-11-24 21:01:48,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | porno
-2025-11-24 21:01:50,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | sa
-2025-11-24 21:06:54,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | py MiniDLP.py
-2025-11-24 21:06:55,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi,SENDER_PC->RECEIVER_PC | py MiniDLP.py
-2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,firmware-amd-graphics_20250808-1_all.deb
-2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,WPSettings.dat
-2025-11-24 21:07:19,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,IndexerVolumeGuid
-2025-11-24 21:08:15,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764007176_test.txt
-2025-11-24 21:08:16,USB Transferi,E_POSTA,ENGEL - Karantina,1764007176_temiz.txt -> EMAIL: <d***@...>
-2025-11-24 21:08:22,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764007638_firmware-amd-graphics_20250808-1_all.deb
-2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,WPSettings.dat
-2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,IndexerVolumeGuid
-2025-11-24 21:18:45,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
-2025-11-24 21:18:45,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,temiz.txt
-2025-11-24 21:24:03,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
-2025-11-24 21:36:01,USB Transferi,TEL_NO,ENGEL - Karantina,hassas.txt -> TEL: ******16
-2025-11-24 21:36:02,USB Yazma,TEMIZ,İZİN VERİLDİ,temiz.txt
-2025-11-24 21:36:02,USB Transferi,Hata,İşlenmedi,Dosya işleme hatası: cannot access local variable 'q' where it is not associated with a value
-2025-11-24 21:41:55,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,temiz.txt
-2025-11-24 21:42:21,USB Transferi,TEL_NO,ENGEL - Karantina,1764009361_hassas.txt -> TEL: ******16
-2025-11-24 21:42:21,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764009715_temiz.txt
-2025-11-24 21:42:21,USB Transferi,TEL_NO,ENGEL - Karantina,1764008325_hassas.txt -> TEL: ******16
-2025-11-24 21:42:21,USB Yazma,Bilinmiyor,ENGEL - Karantinaya alındı,1764008325_temiz.txt
-2025-11-24 21:42:22,USB Transferi,TEL_NO,ENGEL - Karantina,1764008643_hassas.txt -> TEL: ******16
-2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009741_1764009361_hassas.txt -> TEL: ******16
-2025-11-24 21:42:38,USB Yazma,TEMIZ,İZİN VERİLDİ,1764009741_1764009715_temiz.txt
-2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009742_1764008643_hassas.txt -> TEL: ******16
-2025-11-24 21:42:38,USB Transferi,TEL_NO,ENGEL - Karantina,1764009741_1764008325_hassas.txt -> TEL: ******16
-2025-11-24 21:42:38,USB Yazma,TEMIZ,İZİN VERİLDİ,1764009741_1764008325_temiz.txt
-2025-11-27 12:35:00,USB Transferi,BANNED_WORD,ENGEL - Karantina,abc.txt -> secret
+2025-11-30 14:57:42,Ağ Mesajı,Hata,ENGEL - Alıcı Offline,vm_user_1->vm_user_2
+2025-11-30 14:58:18,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******0504
+2025-11-30 14:59:17,Pano Kopyalama,IBAN_TR,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | IBAN: ****0752
+2025-11-30 15:07:21,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | Merhaba, ne yapıyorsun?...
+2025-11-30 15:07:30,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******1110
+2025-11-30 15:07:39,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_2 | hoppa...
+2025-11-30 15:07:52,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******1110
+2025-11-30 15:07:56,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | [DLP] Politika İhlali (TCKN) nedeniyle içerik enge...
+2025-11-30 15:08:03,chat Mesajı,TCKN,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_2 | Yasaklanan Veri Tipleri: TCKN
+2025-11-30 15:08:47,chat Mesajı,YOK (İzin Verildi),İZİN VERİLDİ - Hassas Veri Politika İzni,vm_user_1->vm_user_2 | Hassas veri var ancak vm_user_1 için yasaklı değil.
+2025-11-30 15:09:05,chat Mesajı,IBAN_TR,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_2 | Yasaklanan Veri Tipleri: IBAN_TR
+2025-11-30 15:09:15,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | TR33 0006 1005 1978 645 78 41326...
+2025-11-30 15:09:27,chat Mesajı,YOK (İzin Verildi),İZİN VERİLDİ - Hassas Veri Politika İzni,vm_user_1->vm_user_2 | Hassas veri var ancak vm_user_1 için yasaklı değil.
+2025-11-30 15:27:51,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******2716
+2025-11-30 15:28:05,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******2716
+2025-11-30 15:29:26,Pano Kopyalama,TCKN,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | TC: ******1110
+2025-11-30 15:29:35,chat Mesajı,TCKN,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_2 | Yasaklanan Veri Tipleri: TCKN
+2025-11-30 15:30:46,chat Mesajı,IBAN_TR,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_2 | Yasaklanan Veri Tipleri: IBAN_TR
+2025-11-30 15:30:53,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | NABER...
+2025-11-30 15:31:33,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | koçum...
+2025-11-30 15:32:21,chat Mesajı,TCKN,ENGEL - Kısıtlı Veri Tespiti,vm_user_2->vm_user_1 | Yasaklanan Veri Tipleri: TCKN
+2025-11-30 15:32:27,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_1 | haydaaa...
+2025-11-30 15:32:32,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_1 | lan ananı...
+2025-11-30 15:33:07,Pano Kopyalama,IBAN_TR,ENGEL - Pano Temizlendi (Politika),User: vm_user_1 | IBAN: ****0752
+2025-11-30 15:33:36,chat Mesajı,IBAN_TR,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_2 | Yasaklanan Veri Tipleri: IBAN_TR
+2025-11-30 15:33:48,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | NABER LAN VM_2...
+2025-11-30 15:34:11,chat Mesajı,YOK (İzin Verildi),İZİN VERİLDİ - Hassas Veri Politika İzni,vm_user_2->vm_user_1 | Hassas veri var ancak vm_user_2 için yasaklı değil.
+2025-11-30 15:36:40,chat Mesajı,YOK (İzin Verildi),İZİN VERİLDİ - Hassas Veri Politika İzni,vm_user_4->vm_user_3 | Hassas veri var ancak vm_user_4 için yasaklı değil.
+2025-11-30 15:36:48,chat Mesajı,YOK,İZİN VERİLDİ - Politika Muafiyeti (İncelemesiz Yönlendirme),vm_user_3->vm_user_4 | İçerik taranmadı.
+2025-11-30 15:37:21,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_3 | naber ben vm2...
+2025-11-30 15:37:33,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_3 | e cevap yok mu mal...
+2025-12-01 21:35:31,Ağ Mesajı,Hata,ENGEL - Alıcı Offline,vm1->vm2
+2025-12-01 21:35:42,Pano Kopyalama,ANAHTAR_KELİME,ENGEL - Pano Temizlendi (Politika),User: vm1 | [KEYWORD] boran...
+2025-12-01 23:03:10,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_1 | sasa...
+2025-12-01 23:06:45,Ağ Mesajı,Hata,ENGEL - Alıcı Offline,vm_user_1->vm_user_2
+2025-12-01 23:07:08,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | sa...
+2025-12-01 23:07:33,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_1 | boran...
+2025-12-01 23:07:46,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_1->vm_user_2 | boran...
+2025-12-01 23:08:00,chat Mesajı,YOK,İZİN VERİLDİ - Mesaj iletildi (Temiz),vm_user_2->vm_user_1 | ssss...
+2025-12-03 14:40:14,chat Mesajı,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_3
+2025-12-03 14:40:19,chat Mesajı,YOK,İZİN VERİLDİ - Temiz,vm_user_3->vm_user_1
+2025-12-03 14:40:27,chat Mesajı,YOK,İZİN VERİLDİ - Temiz,vm_user_3->vm_user_1
+2025-12-03 14:40:31,chat Mesajı,ANAHTAR_KELİME,ENGEL - Kısıtlı Veri Tespiti,vm_user_1->vm_user_3 | Yasak: ANAHTAR_KELİME
+2025-12-03 14:40:56,chat Mesajı,ANAHTAR_KELİME,ENGEL - Kısıtlı Veri Tespiti,vm_user_3->vm_user_1 | Yasak: ANAHTAR_KELİME

@@ -1,0 +1,102 @@
+{
+    "vm_user_1": {
+        "clipboard": {
+            "TCKN": true,
+            "IBAN_TR": true,
+            "KREDI_KARTI": true,
+            "E_POSTA": false,
+            "TEL_NO": false,
+            "Keywords": [
+                "araba",
+                "pilot",
+                "boran"
+            ]
+        },
+        "usb": {
+            "TCKN": true,
+            "IBAN_TR": true,
+            "KREDI_KARTI": true,
+            "E_POSTA": false,
+            "TEL_NO": false,
+            "Keywords": []
+        },
+        "network": {
+            "vm_user_2": {
+                "TCKN": true,
+                "IBAN_TR": true,
+                "KREDI_KARTI": false,
+                "E_POSTA": false,
+                "TEL_NO": false,
+                "Keywords": [
+                    "domates",
+                    "patates"
+                ]
+            },
+            "vm_user_3": {
+                "TCKN": true,
+                "IBAN_TR": true,
+                "KREDI_KARTI": true,
+                "E_POSTA": true,
+                "TEL_NO": true,
+                "Keywords": [
+                    "boran"
+                ]
+            }
+        }
+    },
+    "vm_user_2": {
+        "clipboard": {
+            "TCKN": false,
+            "IBAN_TR": false,
+            "KREDI_KARTI": false,
+            "E_POSTA": false,
+            "TEL_NO": false
+        },
+        "usb": {
+            "TCKN": true,
+            "IBAN_TR": true,
+            "KREDI_KARTI": true,
+            "E_POSTA": true,
+            "TEL_NO": true
+        },
+        "network": {
+            "vm_user_1": {
+                "TCKN": true,
+                "IBAN_TR": false,
+                "KREDI_KARTI": false,
+                "E_POSTA": false,
+                "TEL_NO": false
+            }
+        }
+    },
+    "vm_user_3": {
+        "clipboard": {
+            "TCKN": false,
+            "IBAN_TR": false,
+            "KREDI_KARTI": false,
+            "E_POSTA": false,
+            "TEL_NO": false,
+            "Keywords": []
+        },
+        "usb": {
+            "TCKN": false,
+            "IBAN_TR": false,
+            "KREDI_KARTI": false,
+            "E_POSTA": false,
+            "TEL_NO": false,
+            "Keywords": []
+        },
+        "network": {
+            "vm_user_1": {
+                "TCKN": true,
+                "IBAN_TR": true,
+                "KREDI_KARTI": true,
+                "E_POSTA": true,
+                "TEL_NO": true,
+                "Keywords": [
+                    "ramazan"
+                ]
+            }
+        }
+    }
+}

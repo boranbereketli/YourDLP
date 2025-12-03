@@ -1,4 +1,4 @@
-# main_window.py (Düzeltilmiş ve Geliştirilmiş)
+# main_window.py (Güncellendi: Network Hedefi Ekle butonu kaldırıldı)
 
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt
@@ -28,20 +28,17 @@ class MainWindow(QMainWindow):
         # Butonlar
         btns = QHBoxLayout()
 
+        # 1. Yeni Kullanıcı Ekle
         btn_add = QPushButton("Yeni Kullanıcı Ekle")
         btn_add.clicked.connect(self.add_user)
         btns.addWidget(btn_add)
         
-        # YENİ BUTON: Network Hedefi Ekle
-        btn_net_add = QPushButton("Network Hedefi Ekle")
-        btn_net_add.clicked.connect(self.add_network_target)
-        btns.addWidget(btn_net_add)
-
+        # 2. Politika Düzenle
         btn_edit = QPushButton("Politika Düzenle")
         btn_edit.clicked.connect(self.edit_policy)
         btns.addWidget(btn_edit)
         
-        # YENİ BUTON: Kullanıcı Sil
+        # 3. Kullanıcı Sil
         btn_delete = QPushButton("Kullanıcı Sil")
         btn_delete.clicked.connect(self.delete_user)
         btns.addWidget(btn_delete)
@@ -117,29 +114,6 @@ class MainWindow(QMainWindow):
             self.create_default_policy(vm_id) 
 
 
-    def add_network_target(self):
-        """ Seçilen kullanıcı için (Kaynak) bir Network hedefi (Alıcı) eklemek üzere PolicyWindow'u açar. """
-        selected = self.user_list.currentItem()
-        if not selected:
-            QMessageBox.warning(self, "Uyarı", "Kaynak (Source) kullanıcı seç.")
-            return
-
-        source_vm_data = selected.data(Qt.ItemDataRole.UserRole)
-        source_vm_id = source_vm_data["vm_id"]
-
-        # Hedef ID'sini al
-        target_vm_id, ok = QInputDialog.getText(self, "Network Hedefi Ekle", 
-                                                f"'{source_vm_id}' için kısıtlamak istediğiniz Hedef VM ID'sini girin:", 
-                                                text="vm_user_")
-        if not ok or not target_vm_id:
-            return
-
-        # PolicyWindow'u aç ve Network sekmesine geç
-        # PolicyWindow, eğer bu hedef zaten network kuralında yoksa otomatik olarak ekleyecektir.
-        self.policy_win = PolicyWindow(source_vm_id, initial_target=target_vm_id)
-        self.policy_win.show()
-
-
     def delete_user(self):
         """ Kullanıcıyı listeden ve sunucu politikalarından siler. """
         selected = self.user_list.currentItem()
@@ -159,7 +133,7 @@ class MainWindow(QMainWindow):
                 # Gerçekte sunucuda bir DELETE API olmalıdır.
                 requests.post(f"{SERVER}/delete_policy/{vm_id}", timeout=2) 
             except Exception:
-                 QMessageBox.warning(self, "Uyarı", "Sunucudaki politika silinemedi.")
+                 pass # Silme endpointi olmadığı için hata verebilir, şimdilik geçiyoruz.
 
             self.user_list.takeItem(self.user_list.currentRow())
             QMessageBox.information(self, "Silindi", f"'{vm_id}' kullanıcısı listeden silindi.")
@@ -179,7 +153,8 @@ class MainWindow(QMainWindow):
 
 
 # Uygulama çalıştırma kısmı aynı kalır
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
