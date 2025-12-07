@@ -14,6 +14,16 @@ from YOUR_DLP_LIB import (
 app = Flask(__name__)
 POLICY_FILE = "policies.json"
 
+# Renkli konsol çıktıları için
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+
 # ============================================================
 # CONFIG
 # ============================================================
@@ -22,58 +32,40 @@ GATEWAY_LISTEN_PORT = 9101
 LIVE_CONNECTIONS = {}
 USER_POLICIES = {}
 
-DEFAULT_POLICIES = {
-    "vm_user_1": {
-        "clipboard": {"TCKN": True, "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": False, "TEL_NO": False, "Keywords": ["araba", "pilot"]}, 
-        "usb":       {"TCKN": False, "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": False, "TEL_NO": False},  
-        "network":   {"vm_user_2": {"TCKN": True,  "IBAN_TR": True, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False, "Keywords": ["domates", "patates"]}}, 
-    },
-    "vm_user_2": {
-        "clipboard": {"TCKN": False, "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}, 
-        "usb":       {"TCKN": True,  "IBAN_TR": True, "KREDI_KARTI": True, "E_POSTA": True, "TEL_NO": True},   
-        "network":   {"vm_user_1": {"TCKN": True,  "IBAN_TR": False, "KREDI_KARTI": False, "E_POSTA": False, "TEL_NO": False}}, 
-    },
-    "vm_user_3": {
-        "clipboard": {}, 
-        "usb":       {}, 
-        "network":   {},
-    },
-}
+DEFAULT_POLICIES = {} # İlk yüklemede policies.json'dan gelecek
 
 # ============================================================
-# PERSISTENCE (Kalıcılık)
+# PERSISTENCE
 # ============================================================
 def save_policies():
-    """ USER_POLICIES sözlüğünü JSON dosyasına yazar. """
     try:
         with open(POLICY_FILE, 'w', encoding='utf-8') as f:
             json.dump(USER_POLICIES, f, indent=4, ensure_ascii=False)
-        print("[SERVER] Politikalar kaydedildi.")
+        print(f"{Colors.OKGREEN}[SERVER] Politikalar diske kaydedildi.{Colors.ENDC}")
     except Exception as e:
-        print(f"[ERROR] Politikalar kaydedilemedi: {e}")
+        print(f"{Colors.FAIL}[ERROR] Politikalar kaydedilemedi: {e}{Colors.ENDC}")
 
 def load_policies():
-    """ Sunucu açılışında dosyadan politikaları yükler. """
     global USER_POLICIES
     if os.path.exists(POLICY_FILE):
         try:
             with open(POLICY_FILE, 'r', encoding='utf-8') as f:
                 USER_POLICIES = json.load(f)
-            print(f"[SERVER] Politikalar yüklendi: {POLICY_FILE}")
+            print(f"{Colors.OKCYAN}[SERVER] Politikalar yüklendi: {len(USER_POLICIES)} kullanıcı.{Colors.ENDC}")
             return
         except Exception as e:
-            print(f"[ERROR] Yükleme hatası: {e}. Varsayılanlar dönülüyor.")
+            print(f"{Colors.FAIL}[ERROR] Yükleme hatası: {e}.{Colors.ENDC}")
     
-    # Dosya yoksa veya hatalıysa varsayılanları yükle
-    USER_POLICIES = DEFAULT_POLICIES.copy()
+    USER_POLICIES = {}
     save_policies()
 
 load_policies()
 
 # ============================================================
-# LOGGING
+# LOGGING (Server Konsolunda Görünür)
 # ============================================================
 def log_incident(event_type, data_type, action, details):
+    # CSV Kaydı
     log_line = f"{time.strftime('%Y-%m-%d %H:%M:%S')},{event_type},{data_type},{action},{details}\n"
     try:
         if not os.path.exists(LOG_CSV):
@@ -82,8 +74,21 @@ def log_incident(event_type, data_type, action, details):
         with open(LOG_CSV, "a", encoding="utf-8") as f:
             f.write(log_line)
     except Exception as e:
-        print(f"[SERVER LOG ERROR] {e}")
-    print(f"\n[SERVER LOG] {data_type} | {action} | {details}")
+        print(f"[LOG ERROR] {e}")
+
+    # Konsol Çıktısı (Renkli ve Net)
+    timestamp = time.strftime('%H:%M:%S')
+    if "ENGEL" in action:
+        color = Colors.FAIL
+        icon = "⛔"
+    elif "İZİN" in action:
+        color = Colors.OKGREEN
+        icon = "✅"
+    else:
+        color = Colors.WARNING
+        icon = "⚠️"
+
+    print(f"{color}[{timestamp}] {icon} {event_type} | {data_type} | {action} -> {details}{Colors.ENDC}")
 
 
 # ============================================================
@@ -91,11 +96,10 @@ def log_incident(event_type, data_type, action, details):
 # ============================================================
 @app.route('/policies/<user_id>', methods=['GET'])
 def get_policies(user_id):
-    default_restrictions = {d: True for d in DLP_SCAN_ORDER}
-    # Eğer kullanıcı yoksa katı kurallar döndür
+    # Kullanıcı yoksa varsayılan boş bir şablon döndür
     policies = USER_POLICIES.get(user_id, {
-        "clipboard": default_restrictions.copy(),
-        "usb":       default_restrictions.copy(),
+        "clipboard": {d: False for d in DLP_SCAN_ORDER},
+        "usb":       {d: False for d in DLP_SCAN_ORDER},
         "network":   {},
     })
     return jsonify(policies)
@@ -119,54 +123,39 @@ def receive_incident():
 def update_policy():
     data = request.json
     user_id = data.get("user_id")
-    policies = data.get("policies")
+    new_policies = data.get("policies")
 
-    if not user_id or not policies:
+    if not user_id or not new_policies:
         return jsonify({"error": "Eksik parametre"}), 400
 
-    USER_POLICIES[user_id] = policies
+    # Mevcut politikayı al ve güncelle (Merge işlemi - Patlamayı önler)
+    current_policy = USER_POLICIES.get(user_id, {})
+    
+    # Derinlemesine güncelleme yerine ana başlıkları güncelle
+    current_policy["clipboard"] = new_policies.get("clipboard", current_policy.get("clipboard", {}))
+    current_policy["usb"] = new_policies.get("usb", current_policy.get("usb", {}))
+    current_policy["network"] = new_policies.get("network", current_policy.get("network", {}))
+
+    USER_POLICIES[user_id] = current_policy
     save_policies()
     return jsonify({"status": "ok"}), 200
 
-@app.route('/delete_policy/<user_id>', methods=['POST'])
-def delete_policy(user_id):
-    if user_id in USER_POLICIES:
-        del USER_POLICIES[user_id]
-        save_policies()
-        return jsonify({"status": "ok"}), 200
-    return jsonify({"error": "Kullanıcı bulunamadı"}), 404
-
-@app.route('/logs/<vm_id>', methods=['GET'])
-def get_logs_for_user(vm_id):
-    try:
-        if not os.path.exists(LOG_CSV):
-            return jsonify({"logs": []})
-        
-        filtered = []
-        with open(LOG_CSV, "r", encoding="utf-8") as f:
-            for line in f:
-                if f"User: {vm_id}" in line or f"{vm_id}->" in line:
-                    filtered.append(line.strip())
-        return jsonify({"logs": filtered}), 200
-    except Exception as e:
-        return jsonify({"logs": [], "error": str(e)})
-
 @app.route("/users", methods=["GET"])
 def get_users():
+    # Policies dosyasındaki anahtarları kullanıcı listesi olarak dön
     return jsonify({"users": list(USER_POLICIES.keys())})
-
 
 # ============================================================
 # DLP NETWORK GATEWAY (SOCKET)
 # ============================================================
-def process_message(msg: Message):
+def process_message(msg: Message, sender_sock):
     src = msg.src
     dst = msg.dst
     
     # 1. Alıcı Kontrolü
     if dst not in LIVE_CONNECTIONS:
-        log_incident("Ağ Mesajı", "Hata", "ENGEL - Alıcı Offline", f"{src}->{dst}")
-        return False, f"[DLP] HATA: Alıcı VM ({dst}) Gateway'e bağlı değil."
+        log_incident("Ağ", "Hata", "HATA", f"{src}->{dst} (Alıcı Offline)")
+        return False, "OFFLINE"
 
     # 2. Politika Kontrolü
     src_policy = USER_POLICIES.get(src, {})
@@ -176,23 +165,24 @@ def process_message(msg: Message):
 
     # Hedef için özel bir kural yoksa izin ver
     if network_policy_for_dst is None:
-        log_incident(f"{msg.channel}", "YOK", "İZİN VERİLDİ - Kural Yok", f"{src}->{dst}")
+        log_incident("Ağ", "Genel", "İZİN", f"{src}->{dst}")
         try:
-            recipient_sock.sendall(f"[{src}]: {msg.payload}\n".encode("utf-8"))
-            return True, "[DLP] Mesaj iletildi."
+            # Alıcıya mesajı ilet
+            recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
+            return True, "OK"
         except:
-            return False, "[DLP] Gönderim hatası."
+            return False, "SEND_ERR"
 
     # 3. İçerik Taraması
     dynamic_keywords = network_policy_for_dst.get("Keywords", []) 
-    incidents = scan_content(msg.payload, dynamic_keywords) 
+    incidents = scan_content(msg.payload.lower(), [k.lower() for k in dynamic_keywords])
     
     blocked_reasons = []
     if incidents:
         for incident in incidents:
             d_type = incident["data_type"]
             if d_type == "KEYWORD_MATCH" and dynamic_keywords:
-                blocked_reasons.append("ANAHTAR_KELİME")
+                blocked_reasons.append("KEYWORD")
             
             # Eğer politika bu veri tipini True (Yasaklı) olarak işaretlemişse
             if network_policy_for_dst.get(d_type, False): 
@@ -201,16 +191,17 @@ def process_message(msg: Message):
     # 4. Aksiyon (Engel veya İzin)
     if blocked_reasons:
         reason_str = "/".join(set(blocked_reasons))
-        log_incident(f"{msg.channel}", reason_str, "ENGEL - Yasak Veri", f"{src}->{dst}")
-        return False, f"[DLP] Mesajınız yasaklanmış veri ({reason_str}) içerdiği için engellendi."
+        log_incident("Ağ", reason_str, "ENGEL", f"{src}->{dst}")
+        # Gönderene yasaklandığını bildir
+        return False, f"BLOCKED:{reason_str}"
     
     # Temiz
-    log_incident(f"{msg.channel}", "YOK", "İZİN VERİLDİ - Temiz", f"{src}->{dst}")
+    log_incident("Ağ", "Temiz", "İZİN", f"{src}->{dst}")
     try:
-        recipient_sock.sendall(f"[{src}]: {msg.payload}\n".encode("utf-8"))
-        return True, "[DLP] Mesaj iletildi."
+        recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
+        return True, "OK"
     except:
-        return False, "[DLP] Mesaj gönderilemedi."
+        return False, "SEND_ERR"
 
 def client_handler(conn, addr):
     user_id = None
@@ -222,10 +213,10 @@ def client_handler(conn, addr):
         if first_line.startswith("HELLO:"):
             user_id = first_line.split(":", 1)[1].strip()
             LIVE_CONNECTIONS[user_id] = {'ip': addr[0], 'socket': conn}
-            print(f"[GATEWAY] Bağlandı: {user_id} ({addr[0]})")
-            conn.sendall(f"Hoş Geldin, {user_id}. Gateway aktif.\n".encode("utf-8"))
+            print(f"{Colors.OKBLUE}[GATEWAY] Bağlandı: {user_id} ({addr[0]}){Colors.ENDC}")
+            conn.sendall(f"WELCOME:{user_id}\n".encode("utf-8"))
         else:
-            conn.sendall("ERROR: Protocol mismatch.\n".encode("utf-8"))
+            conn.close()
             return
 
         # Mesaj Döngüsü
@@ -238,26 +229,39 @@ def client_handler(conn, addr):
                     channel=data.get("channel", "chat"), 
                     payload=data.get("payload", "")
                 )
-                success, response_msg = process_message(msg)
-                if not success:
-                    conn.sendall(f"{response_msg}\n".encode("utf-8"))
+                
+                # Mesajı işle
+                success, status_code = process_message(msg, conn)
+                
+                # Gönderene geri bildirim (ACK/NACK)
+                if success:
+                    # Başarılı ise ACK gönder
+                    conn.sendall(f"ACK:{msg.dst}:{msg.payload}\n".encode("utf-8"))
+                else:
+                    # Başarısız ise Hata/Blok kodu gönder
+                    conn.sendall(f"ERR:{msg.dst}:{status_code}\n".encode("utf-8"))
+
             except json.JSONDecodeError:
                 continue
+            except Exception as e:
+                print(f"[Global Error] {e}")
 
     except Exception:
         pass
     finally:
         if user_id and user_id in LIVE_CONNECTIONS:
             del LIVE_CONNECTIONS[user_id]
+            print(f"{Colors.WARNING}[GATEWAY] Ayrıldı: {user_id}{Colors.ENDC}")
         try: conn.close()
         except: pass
 
 def run_gateway():
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         server_sock.bind((GATEWAY_LISTEN_HOST, GATEWAY_LISTEN_PORT))
         server_sock.listen(5)
-        print(f"[GATEWAY] Dinleniyor: {GATEWAY_LISTEN_HOST}:{GATEWAY_LISTEN_PORT}")
+        print(f"{Colors.HEADER}[GATEWAY] Dinleniyor: {GATEWAY_LISTEN_HOST}:{GATEWAY_LISTEN_PORT}{Colors.ENDC}")
         while True:
             conn, addr = server_sock.accept()
             threading.Thread(target=client_handler, args=(conn, addr), daemon=True).start()
@@ -267,9 +271,6 @@ def run_gateway():
         server_sock.close()
 
 if __name__ == '__main__':
-    # Gateway'i thread olarak başlat
     threading.Thread(target=run_gateway, daemon=True).start()
-    
-    # Flask sunucusunu başlat
     print("\n[SERVER] API başlatılıyor (Port 5000)...")
     app.run(host='127.0.0.1', port=5000)

@@ -178,7 +178,13 @@ class PolicyWindow(QWidget):
         self.usb_tab.load(self.raw_policy.get("usb", {}))
 
         # 3. Network Verisini Hafızaya Al ve Listeyi Doldur
-        self.network_data = self.raw_policy.get("network", {})
+        # Bazı durumlarda network datası dict gelmeyebiliyor, kontrol ekleyelim
+        net_data = self.raw_policy.get("network", {})
+        if isinstance(net_data, dict):
+            self.network_data = net_data
+        else:
+            self.network_data = {}
+
         self.target_list.clear()
         
         if self.network_data:

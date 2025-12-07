@@ -1,5 +1,4 @@
 # unified_agent.py
-# (DÜZELTME: Indentation hatası giderildi, styles.qss entegreli)
 
 import sys
 import socket
@@ -16,7 +15,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 
-# Kütüphaneden gerekli fonksiyonları al
+# Kütüphaneden gerekli fonksiyonları al (Aynen korunuyor)
 from YOUR_DLP_LIB import (
     scan_content, read_file_content, quarantine_file,
     get_usb_mount_points, QUARANTINE_DIR, ALLOWED_EXT,
@@ -236,10 +235,11 @@ class USBHandler(FileSystemEventHandler):
 
 
 # ============================================================
-# CORE ENGINE (HATA BURADAYDI, DÜZELTİLDİ)
+# CORE ENGINE (NETWORK GÜNCELLEMESİ)
 # ============================================================
 class UnifiedAgentCore(QObject):
-    sig_chat_msg = pyqtSignal(str, bool)
+    # (Mesaj, Benim_Mesajim_Mi, Hata_Var_Mi)
+    sig_chat_msg = pyqtSignal(str, bool, bool) 
     sig_dlp_log = pyqtSignal(str)
     sig_net_status = pyqtSignal(bool)
 
@@ -281,9 +281,14 @@ class UnifiedAgentCore(QObject):
             self.sock.connect((GATEWAY_IP, GATEWAY_PORT))
             self.sock.sendall(f"HELLO:{self.vm_id}\n".encode("utf-8"))
             f = self.sock.makefile("r", encoding="utf-8")
-            f.readline()
-            self.sig_net_status.emit(True)
-            return f
+            
+            # Sunucudan WELCOME bekliyoruz
+            resp = f.readline()
+            if "WELCOME" in resp:
+                self.sig_net_status.emit(True)
+                return f
+            else:
+                return None
         except:
             self.sock = None
             self.sig_net_status.emit(False)
@@ -300,11 +305,48 @@ class UnifiedAgentCore(QObject):
             try:
                 line = f.readline()
                 if not line: raise Exception
-                msg = line.strip()
-                if msg.startswith("[DLP]"):
-                    self.sig_dlp_log.emit(msg)
-                elif msg.startswith("["):
-                    self.sig_chat_msg.emit(msg, False)
+                raw = line.strip()
+
+                # 1. Başka kullanıcıdan normal mesaj geldi
+                # Format: MSG:gonderen:icerik
+                if raw.startswith("MSG:"):
+                    parts = raw.split(":", 2)
+                    sender = parts[1]
+                    content = parts[2]
+                    self.sig_chat_msg.emit(f"<b>{sender}:</b> {content}", False, False)
+
+                # 2. Server benim mesajımı onayladı (ACK)
+                # Format: ACK:alici:icerik
+                elif raw.startswith("ACK:"):
+                    parts = raw.split(":", 2)
+                    target = parts[1]
+                    content = parts[2]
+                    # true, true -> Benim mesajım, Hata yok
+                    self.sig_chat_msg.emit(f"<b>BEN -> {target}:</b> {content}", True, False)
+
+                # 3. Server mesajımı engelledi veya hata döndü (ERR)
+                # Format: ERR:alici:hata_kodu
+                elif raw.startswith("ERR:"):
+                    parts = raw.split(":", 2)
+                    target = parts[1]
+                    err_code = parts[2]
+                    
+                    if "BLOCKED" in err_code:
+                        reason = err_code.split(":")[1] if ":" in err_code else "Yasaklı İçerik"
+                        error_msg = f"🚫 <b>İLETİLEMEDİ ({target}):</b> Mesajınız '{reason}' sebebiyle engellendi."
+                        self.sig_chat_msg.emit(error_msg, True, True) # True, True -> Benim mesajım, Hata VAR
+                        self.sig_dlp_log.emit(f"Ağ Engeli: {target}'a gönderim '{reason}' nedeniyle bloklandı.")
+                    
+                    elif "OFFLINE" in err_code:
+                        self.sig_chat_msg.emit(f"⚠️ <b>HATA:</b> {target} çevrimdışı.", True, True)
+                    
+                    else:
+                        self.sig_chat_msg.emit(f"⚠️ <b>HATA:</b> Gönderim başarısız.", True, True)
+
+                # Eski format desteği (ne olur ne olmaz)
+                elif raw.startswith("[DLP]"):
+                    self.sig_dlp_log.emit(raw)
+                    
             except:
                 self.sock = None
                 self.sig_net_status.emit(False)
@@ -315,8 +357,8 @@ class UnifiedAgentCore(QObject):
             self.sig_dlp_log.emit("⚠️ Mesaj gönderilemedi: Gateway kapalı.")
             return
         try:
+            # Sadece gönderiyoruz, ekrana basmıyoruz. Ekrana basma işi ACK gelince olacak.
             self.sock.sendall((json.dumps({"dst": target, "channel": "chat", "payload": msg}) + "\n").encode("utf-8"))
-            self.sig_chat_msg.emit(f"<b>BEN -> {target}:</b> {msg}", True)
         except:
             self.sock = None
             self.sig_dlp_log.emit("⚠️ Gönderim hatası.")
@@ -416,7 +458,7 @@ class UnifiedWindow(QWidget):
         self.setWindowTitle("DLP Unified Agent - Enterprise Edition")
         self.setMinimumSize(1000, 750)
 
-        # --- KULLANICI ADI KONTROL DÖNGÜSÜ (GÜNCELLENMİŞ KISIM) ---
+        # --- KULLANICI ADI KONTROL DÖNGÜSÜ ---
         valid_users = get_registered_users()
         self.vm_id = None
 
@@ -430,12 +472,16 @@ class UnifiedWindow(QWidget):
 
             # 2. Geçerli Kullanıcı Kontrolü
             vm_id = vm_id.strip()
-            if vm_id in valid_users:
-                self.vm_id = vm_id # Başarılı giriş
-            elif not vm_id:
-                QMessageBox.critical(self, "Hata", "Kullanıcı adı boş bırakılamaz.")
+            # Sunucu kapalıysa veya liste boşsa her türlü girişe izin ver (Test amaçlı)
+            if not valid_users:
+                if vm_id: self.vm_id = vm_id
             else:
-                QMessageBox.critical(self, "Hata", f"'{vm_id}' kaydedilmemiş bir kullanıcı adıdır. Lütfen geçerli bir kullanıcı adı girin.")
+                if vm_id in valid_users:
+                    self.vm_id = vm_id 
+                elif not vm_id:
+                    QMessageBox.critical(self, "Hata", "Kullanıcı adı boş bırakılamaz.")
+                else:
+                    QMessageBox.critical(self, "Hata", f"'{vm_id}' kaydedilmemiş bir kullanıcı adıdır.")
 
         self.core = UnifiedAgentCore(self.vm_id)
         self.core.sig_chat_msg.connect(self.on_chat_msg)
@@ -565,12 +611,19 @@ class UnifiedWindow(QWidget):
         except:
             pass
 
-    def on_chat_msg(self, msg, is_mine):
-        style = "background-color: #DCF8C6; border-radius: 15px 15px 0 15px;" if is_mine else "background-color: #E5E5EA; border-radius: 15px 15px 15px 0;"
-        align = "right" if is_mine else "left"
-        self.chat_area.append(
-            f"<div style='text-align: {align}; margin: 5px;'><span style='{style} color: black; padding: 8px 12px; font-size: 14px;'>{msg}</span></div>"
-        )
+    def on_chat_msg(self, msg, is_mine, is_error):
+        # YENİ ÖZELLİK: Hata durumunda kırmızı kutu
+        if is_error:
+             self.chat_area.append(
+                f"<div style='text-align: center; margin: 5px;'><span style='background-color: #ffebee; border: 1px solid #ffcdd2; color: #c62828; padding: 8px 12px; font-size: 14px; font-weight: bold;'>{msg}</span></div>"
+            )
+        else:
+            style = "background-color: #DCF8C6; border-radius: 15px 15px 0 15px;" if is_mine else "background-color: #E5E5EA; border-radius: 15px 15px 15px 0;"
+            align = "right" if is_mine else "left"
+            self.chat_area.append(
+                f"<div style='text-align: {align}; margin: 5px;'><span style='{style} color: black; padding: 8px 12px; font-size: 14px;'>{msg}</span></div>"
+            )
+        
         sb = self.chat_area.verticalScrollBar()
         sb.setValue(sb.maximum())
 

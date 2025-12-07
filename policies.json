@@ -9,7 +9,8 @@
             "Keywords": [
                 "araba",
                 "pilot",
-                "boran"
+                "boran",
+                "deu"
             ]
         },
         "usb": {
@@ -22,25 +23,25 @@
         },
         "network": {
             "vm_user_2": {
-                "TCKN": true,
+                "E_POSTA": false,
                 "IBAN_TR": true,
                 "KREDI_KARTI": false,
-                "E_POSTA": false,
-                "TEL_NO": false,
                 "Keywords": [
                     "domates",
                     "patates"
-                ]
+                ],
+                "TCKN": true,
+                "TEL_NO": false
             },
             "vm_user_3": {
-                "TCKN": true,
+                "E_POSTA": true,
                 "IBAN_TR": true,
                 "KREDI_KARTI": true,
-                "E_POSTA": true,
-                "TEL_NO": true,
                 "Keywords": [
                     "boran"
-                ]
+                ],
+                "TCKN": true,
+                "TEL_NO": true
             }
         }
     },
@@ -95,6 +96,39 @@
                 "TEL_NO": true,
                 "Keywords": [
                     "ramazan"
+                ]
+            }
+        }
+    },
+    "vm_user_4": {
+        "clipboard": {
+            "TCKN": true,
+            "IBAN_TR": true,
+            "KREDI_KARTI": true,
+            "E_POSTA": true,
+            "TEL_NO": true,
+            "Keywords": []
+        },
+        "usb": {
+            "TCKN": false,
+            "IBAN_TR": false,
+            "KREDI_KARTI": false,
+            "E_POSTA": false,
+            "TEL_NO": false,
+            "Keywords": [
+                "bilgisayar"
+            ]
+        },
+        "network": {
+            "vm_user_1": {
+                "TCKN": true,
+                "IBAN_TR": true,
+                "KREDI_KARTI": true,
+                "E_POSTA": true,
+                "TEL_NO": true,
+                "Keywords": [
+                    "bilgisayar",
+                    "boran"
                 ]
             }
         }

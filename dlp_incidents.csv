@@ -65,3 +65,28 @@ Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay
 2025-12-05 17:10:02,USB Transfer,KREDI_KARTI,ENGEL,User: vm_user_1 | dlp_test_notclean.txt -> Karantina
 2025-12-05 17:10:17,USB Transfer,KREDI_KARTI,ENGEL,User: vm_user_1 | dlp_test_notclean2.txt -> Karantina
 2025-12-05 17:10:37,Pano,KREDI_KARTI,ENGEL,User: vm_user_1 | CC: XXXX...3456
+2025-12-06 01:01:57,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_1->vm_user_2
+2025-12-06 01:02:03,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-06 01:02:11,chat,YOK,İZİN VERİLDİ - Temiz,vm_user_2->vm_user_1
+2025-12-06 01:02:18,chat,ANAHTAR_KELİME,ENGEL - Yasak Veri,vm_user_1->vm_user_2
+2025-12-06 01:02:32,chat,TCKN,ENGEL - Yasak Veri,vm_user_1->vm_user_2
+2025-12-06 01:03:02,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-06 01:03:03,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-06 01:03:08,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-06 01:03:09,Pano,TCKN,ENGEL,User: vm_user_1 | TC: ******2716
+2025-12-07 13:59:28,Ağ,Hata,HATA,vm_user_1->vm_user_2 (Alıcı Offline)
+2025-12-07 14:04:07,Ağ,Hata,HATA,vm_user_1->vm_user_2 (Alıcı Offline)
+2025-12-07 14:04:42,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-07 14:04:48,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-07 14:04:57,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-07 14:05:02,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-07 14:05:05,Ağ,KEYWORD,ENGEL,vm_user_1->vm_user_2
+2025-12-07 14:08:40,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-07 14:08:44,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-07 14:08:46,Ağ,Temiz,İZİN,vm_user_1->vm_user_2
+2025-12-07 14:14:19,Ağ,Temiz,İZİN,vm_user_2->vm_user_1
+2025-12-08 00:00:21,Ağ,Temiz,İZİN,vm_user_4->vm_user_1
+2025-12-08 00:00:23,Ağ,Genel,İZİN,vm_user_1->vm_user_4
+2025-12-08 00:00:28,Ağ,Genel,İZİN,vm_user_1->vm_user_4
+2025-12-08 00:00:34,Ağ,KEYWORD,ENGEL,vm_user_4->vm_user_1
+2025-12-08 00:00:58,Ağ,KEYWORD,ENGEL,vm_user_4->vm_user_1
