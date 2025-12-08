@@ -24,13 +24,30 @@ MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_EXT = {".txt", ".csv", ".docx", ".pdf", ".xlsx", ".xls", ".pptx"}
 DLP_SCAN_ORDER = ["TCKN", "TEL_NO", "IBAN_TR", "KREDI_KARTI", "E_POSTA"]
 
+# ------------------------------------------------------------
 # Regex Patterns (Pre-compiled for performance)
-REGEX_TCKN = re.compile(r'\b[1-9]\d{10}\b')
-REGEX_TEL = re.compile(r'(?:(?:\+90|0)?5\d{9})')
-REGEX_CC = re.compile(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b')
-REGEX_EMAIL = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
-REGEX_IBAN = re.compile(r'\bTR\d{2}[A-Z0-9]{4}\s?(?:\d{4}\s?){4}\d{2}\b')
+# ------------------------------------------------------------
+# 🚨 ÖNEMLİ: \b (kelime sınırı) karakterleri, parça tespiti için kaldırılmıştır!
 
+# TCKN: Sadece 11 haneli bitişik rakamları arar.
+REGEX_TCKN = re.compile(r'\d{11}') 
+
+# TEL_NO: Aynı kalır, zaten \b ihtiyacı yoktur.
+REGEX_TEL = re.compile(r'(?:(?:\+90|0)?5\d{9})')
+
+# KREDİ KARTI: 16 haneli formatı arar. (Önceki: r'\b... \b')
+REGEX_CC = re.compile(r'\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}')
+
+# E-POSTA: Aynı kalır.
+REGEX_EMAIL = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
+
+# IBAN: TR ile başlayan formatı arar. (Önceki: r'\b... \b')
+REGEX_IBAN = re.compile(r'TR\d{2}[A-Z0-9]{4}\s?(?:\d{4}\s?){4}\d{2}')
+
+
+# ------------------------------------------------------------
+# DLP_RULES Sözlüğü
+# ------------------------------------------------------------
 DLP_RULES = {
     "TCKN": {"pattern": REGEX_TCKN, "description": "11 Haneli TC Kimlik Numarası"},
     "TEL_NO": {"pattern": REGEX_TEL, "description": "Türkiye Telefon Numarası"},
@@ -126,50 +143,69 @@ def is_valid_iban(iban: str) -> bool:
 # ============================================================
 
 def scan_content(content: str, dynamic_keywords: list = None):
-    """ Tüm hassas veri tiplerini tarar ve bulunanları listeler. """
+    """ 
+    Tüm hassas veri tiplerini ve dinamik anahtar kelimeleri tarar. 
+    Kelime sınırlarını göz ardı ederek parça tespiti (substring matching) yapar.
+    """
     incidents = []
     if not content: return incidents
-    
-    full_text = str(content)
-    upper_text = full_text.upper()
+    try: full_text = str(content)
+    except Exception: full_text = ""
 
-    # 1) Dinamik Anahtar Kelime Taraması
+    upper_text = full_text.upper() 
+
+    # --- 1) DİNAMİK ANAHTAR KELİME TARAMASI ---
     if dynamic_keywords:
         for keyword in dynamic_keywords:
-            if keyword.upper() in upper_text:
+            upper_keyword = keyword.upper()
+            if upper_keyword in upper_text:
+                # Anahtar kelimeyi 'KEYWORD_MATCH' olarak kaydet
                 incidents.append({
                     "data_type": "KEYWORD_MATCH",
                     "description": f"Anahtar Kelime Tespiti: {keyword}",
                     "masked_match": f"[KEYWORD] {keyword[:15]}..."
                 })
+                # Bir eşleşme bulmak yeterli (listeden çıkan kurala göre)
+                # NOT: Tüm listeyi kontrol etmek yerine, bu veri tipini engellemek yeterlidir.
+                break 
 
-    # Telefon taraması için geçici maskeleme metni
+    # --- 2) REGEX ve NUMERİK TARAMA (Parça Tespiti Dahil) ---
     text_for_tel_no = list(full_text)
-
-    # 2) TCKN Tespiti
-    rule_tckn = DLP_RULES["TCKN"]
-    matches = rule_tckn["pattern"].finditer(full_text)
     
+    # A) TCKN Tespiti (Agresif 11 haneli sayı blokları arama)
+    
+    # 11 haneli veya daha uzun bitişik rakam dizilerini arar
+    tckn_candidate_pattern = re.compile(r'\d{11,}') 
     tckn_matches = set()
-    for mo in matches:
-        match_str = mo.group(0)
-        cand = re.sub(r"\D", "", match_str)
-        if is_valid_tckn(cand):
-            tckn_matches.add(cand)
-            # Maskeleme: Telefonla karışmaması için bulunan TCKN yerlerini sil
-            start, end = mo.span()
-            for i in range(start, end):
-                if i < len(text_for_tel_no):
-                    text_for_tel_no[i] = " "
-
+    
+    # TCKN için kayan pencere kontrolü
+    for mo in tckn_candidate_pattern.finditer(full_text):
+        full_match = mo.group(0)
+        # 11 hanelik tüm alt dizileri kontrol et (kayan pencere)
+        for i in range(len(full_match) - 10):
+            cand = full_match[i:i+11]
+            if is_valid_tckn(cand):
+                tckn_matches.add(cand)
+                
+                # Doğrulanan TCKN'leri, telefon taramasından çıkarmak için metinde boşlukla değiştir.
+                start_index = mo.span()[0] + i 
+                for j in range(11):
+                     idx = start_index + j
+                     if 0 <= idx < len(text_for_tel_no):
+                         text_for_tel_no[idx] = " "
+    
+    # TCKN Incident'larını ekle
+    rule_tckn = DLP_RULES["TCKN"]
     for cand in sorted(list(tckn_matches)):
         masked = f"TC: ******{cand[-4:]}"
         incidents.append({"data_type": "TCKN", "description": rule_tckn["description"], "masked_match": masked})
 
-    # 3) Telefon Tespiti
-    text_for_tel_str = "".join(text_for_tel_no)
+    text_for_tel_no = "".join(text_for_tel_no) # Telefon taramasına hazır metin
+
+    # B) Telefon Numaraları (TCKN çıkarılmış metin üzerinde arama)
     rule_tel = DLP_RULES["TEL_NO"]
-    tel_matches = rule_tel["pattern"].findall(text_for_tel_str)
+    try: tel_matches = re.findall(rule_tel["pattern"], text_for_tel_no)
+    except Exception: tel_matches = []
 
     for m in set(tel_matches):
         if is_valid_phone(m):
@@ -177,12 +213,14 @@ def scan_content(content: str, dynamic_keywords: list = None):
             masked = f"TEL: ******{flat[-2:]}"
             incidents.append({"data_type": "TEL_NO", "description": rule_tel["description"], "masked_match": masked})
 
-    # 4) Diğer Kurallar
+    # C) Diğer kurallar (IBAN_TR, KREDI_KARTI, E_POSTA)
     for data_type in DLP_SCAN_ORDER:
         if data_type in {"TCKN", "TEL_NO"}: continue
         
         rule = DLP_RULES[data_type]
-        matches = rule["pattern"].findall(full_text)
+        # Regex'ler artık \b olmadan tanımlandığı için kelime parçalarını yakalar
+        try: matches = re.findall(rule["pattern"], full_text) 
+        except re.error: matches = []
 
         for match in set(matches):
             if isinstance(match, tuple): match = "".join(match)
@@ -194,9 +232,11 @@ def scan_content(content: str, dynamic_keywords: list = None):
                     incidents.append({"data_type": "IBAN_TR", "description": rule["description"], "masked_match": masked})
 
             elif data_type == "KREDI_KARTI":
+                # Kredi kartı formatını (16 rakam) kelimeye bitişik bulsa bile kaydeder
                 flat = re.sub(r"\D", "", match)
-                masked = f"CC: XXXX...{flat[-4:]}"
-                incidents.append({"data_type": "KREDI_KARTI", "description": rule["description"], "masked_match": masked})
+                if len(flat) == 16: # Format eksiksiz olmalı
+                    masked = f"CC: XXXX...{flat[-4:]}"
+                    incidents.append({"data_type": "KREDI_KARTI", "description": rule["description"], "masked_match": masked})
 
             elif data_type == "E_POSTA":
                 try:
