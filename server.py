@@ -6,6 +6,9 @@ import socket
 import time
 import os
 import json
+import csv  # <-- CSV kütüphanesi eklendi
+
+# Harici kütüphaneniz
 from YOUR_DLP_LIB import (
     scan_content, Message, LOG_CSV, 
     DLP_SCAN_ORDER 
@@ -14,7 +17,7 @@ from YOUR_DLP_LIB import (
 app = Flask(__name__)
 POLICY_FILE = "policies.json"
 
-# Renkli konsol çıktıları için
+# Konsol Renkleri
 class Colors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -32,16 +35,14 @@ GATEWAY_LISTEN_PORT = 9101
 LIVE_CONNECTIONS = {}
 USER_POLICIES = {}
 
-DEFAULT_POLICIES = {} # İlk yüklemede policies.json'dan gelecek
-
 # ============================================================
-# PERSISTENCE
+# PERSISTENCE (Kalıcılık)
 # ============================================================
 def save_policies():
     try:
         with open(POLICY_FILE, 'w', encoding='utf-8') as f:
             json.dump(USER_POLICIES, f, indent=4, ensure_ascii=False)
-        print(f"{Colors.OKGREEN}[SERVER] Politikalar diske kaydedildi.{Colors.ENDC}")
+        print(f"{Colors.OKGREEN}[SERVER] Politikalar kaydedildi.{Colors.ENDC}")
     except Exception as e:
         print(f"{Colors.FAIL}[ERROR] Politikalar kaydedilemedi: {e}{Colors.ENDC}")
 
@@ -62,21 +63,31 @@ def load_policies():
 load_policies()
 
 # ============================================================
-# LOGGING (Server Konsolunda Görünür)
+# LOGGING (GÜNCELLENDİ: Güvenli CSV Yazma)
 # ============================================================
 def log_incident(event_type, data_type, action, details):
-    # CSV Kaydı
-    log_line = f"{time.strftime('%Y-%m-%d %H:%M:%S')},{event_type},{data_type},{action},{details}\n"
+    # --- CSV KAYDI (DÜZELTİLDİ) ---
+    # csv.writer kullanarak virgül içeren verilerin CSV'yi bozmasını engelliyoruz.
     try:
-        if not os.path.exists(LOG_CSV):
-            with open(LOG_CSV, "w", encoding="utf-8") as f:
-                f.write("Tarih,Olay_Tipi,Veri_Tipi,Aksiyon,Detay\n")
-        with open(LOG_CSV, "a", encoding="utf-8") as f:
-            f.write(log_line)
+        file_exists = os.path.exists(LOG_CSV)
+        with open(LOG_CSV, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            # Dosya yoksa başlıkları yaz
+            if not file_exists:
+                writer.writerow(["Tarih", "Olay_Tipi", "Veri_Tipi", "Aksiyon", "Detay"])
+            
+            # Veriyi güvenli şekilde yaz
+            writer.writerow([
+                time.strftime('%Y-%m-%d %H:%M:%S'),
+                event_type,
+                data_type,
+                action,
+                details
+            ])
     except Exception as e:
         print(f"[LOG ERROR] {e}")
 
-    # Konsol Çıktısı (Renkli ve Net)
+    # --- KONSOL ÇIKTISI ---
     timestamp = time.strftime('%H:%M:%S')
     if "ENGEL" in action:
         color = Colors.FAIL
@@ -88,15 +99,47 @@ def log_incident(event_type, data_type, action, details):
         color = Colors.WARNING
         icon = "⚠️"
 
-    print(f"{color}[{timestamp}] {icon} {event_type} | {data_type} | {action} -> {details}{Colors.ENDC}")
+    # Konsolda detaylar çok uzunsa kırpabiliriz
+    safe_details = (details[:75] + '..') if len(details) > 75 else details
+    print(f"{color}[{timestamp}] {icon} {event_type} | {data_type} | {action} -> {safe_details}{Colors.ENDC}")
 
 
 # ============================================================
 # REST API ENDPOINTS
 # ============================================================
+
+@app.route('/all_logs', methods=['GET'])
+def get_all_logs():
+    """CSV dosyasını okur ve JSON olarak döner. Hatalı satırları onarır."""
+    logs = []
+    if os.path.exists(LOG_CSV):
+        try:
+            with open(LOG_CSV, 'r', encoding='utf-8') as f:
+                # DictReader kullanıyoruz
+                reader = csv.DictReader(f)
+                
+                # --- HATA DÜZELTME BLOĞU ---
+                for row in reader:
+                    # Eğer satırda beklenenden fazla virgül varsa, DictReader bunları 'None' key'ine atar.
+                    # Bu durum JSON.dumps'ta çökme yaratır. Bunu temizliyoruz:
+                    if None in row:
+                        extra_data = row.pop(None) # None key'ini sil ve veriyi al
+                        # Ekstra veriyi 'Detay' sütununa ekleyelim ki kaybolmasın
+                        if 'Detay' in row and extra_data:
+                            row['Detay'] += " " + " ".join(extra_data)
+                    
+                    logs.append(row)
+                
+                logs.reverse() # En yeniler en üstte
+        except Exception as e:
+            # Hata durumunda boş liste dön, sunucuyu çökertme
+            print(f"[LOG READ ERROR] {e}")
+            return jsonify({"error": str(e), "logs": []})
+            
+    return jsonify({"logs": logs})
+
 @app.route('/policies/<user_id>', methods=['GET'])
 def get_policies(user_id):
-    # Kullanıcı yoksa varsayılan boş bir şablon döndür
     policies = USER_POLICIES.get(user_id, {
         "clipboard": {d: False for d in DLP_SCAN_ORDER},
         "usb":       {d: False for d in DLP_SCAN_ORDER},
@@ -128,10 +171,8 @@ def update_policy():
     if not user_id or not new_policies:
         return jsonify({"error": "Eksik parametre"}), 400
 
-    # Mevcut politikayı al ve güncelle (Merge işlemi - Patlamayı önler)
     current_policy = USER_POLICIES.get(user_id, {})
     
-    # Derinlemesine güncelleme yerine ana başlıkları güncelle
     current_policy["clipboard"] = new_policies.get("clipboard", current_policy.get("clipboard", {}))
     current_policy["usb"] = new_policies.get("usb", current_policy.get("usb", {}))
     current_policy["network"] = new_policies.get("network", current_policy.get("network", {}))
@@ -142,7 +183,6 @@ def update_policy():
 
 @app.route("/users", methods=["GET"])
 def get_users():
-    # Policies dosyasındaki anahtarları kullanıcı listesi olarak dön
     return jsonify({"users": list(USER_POLICIES.keys())})
 
 # ============================================================
@@ -152,28 +192,23 @@ def process_message(msg: Message, sender_sock):
     src = msg.src
     dst = msg.dst
     
-    # 1. Alıcı Kontrolü
     if dst not in LIVE_CONNECTIONS:
         log_incident("Ağ", "Hata", "HATA", f"{src}->{dst} (Alıcı Offline)")
         return False, "OFFLINE"
 
-    # 2. Politika Kontrolü
     src_policy = USER_POLICIES.get(src, {})
     network_policy_for_dst = src_policy.get("network", {}).get(dst)
     
     recipient_sock = LIVE_CONNECTIONS[dst]['socket']
 
-    # Hedef için özel bir kural yoksa izin ver
     if network_policy_for_dst is None:
         log_incident("Ağ", "Genel", "İZİN", f"{src}->{dst}")
         try:
-            # Alıcıya mesajı ilet
             recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
             return True, "OK"
         except:
             return False, "SEND_ERR"
 
-    # 3. İçerik Taraması
     dynamic_keywords = network_policy_for_dst.get("Keywords", []) 
     incidents = scan_content(msg.payload.lower(), [k.lower() for k in dynamic_keywords])
     
@@ -184,18 +219,14 @@ def process_message(msg: Message, sender_sock):
             if d_type == "KEYWORD_MATCH" and dynamic_keywords:
                 blocked_reasons.append("KEYWORD")
             
-            # Eğer politika bu veri tipini True (Yasaklı) olarak işaretlemişse
             if network_policy_for_dst.get(d_type, False): 
                 blocked_reasons.append(d_type)
         
-    # 4. Aksiyon (Engel veya İzin)
     if blocked_reasons:
         reason_str = "/".join(set(blocked_reasons))
         log_incident("Ağ", reason_str, "ENGEL", f"{src}->{dst}")
-        # Gönderene yasaklandığını bildir
         return False, f"BLOCKED:{reason_str}"
     
-    # Temiz
     log_incident("Ağ", "Temiz", "İZİN", f"{src}->{dst}")
     try:
         recipient_sock.sendall(f"MSG:{src}:{msg.payload}\n".encode("utf-8"))
@@ -208,7 +239,6 @@ def client_handler(conn, addr):
     try:
         conn_file = conn.makefile("r", encoding="utf-8")
         
-        # Handshake
         first_line = conn_file.readline().strip()
         if first_line.startswith("HELLO:"):
             user_id = first_line.split(":", 1)[1].strip()
@@ -219,7 +249,6 @@ def client_handler(conn, addr):
             conn.close()
             return
 
-        # Mesaj Döngüsü
         for line in conn_file:
             try:
                 data = json.loads(line.rstrip("\n"))
@@ -230,15 +259,11 @@ def client_handler(conn, addr):
                     payload=data.get("payload", "")
                 )
                 
-                # Mesajı işle
                 success, status_code = process_message(msg, conn)
                 
-                # Gönderene geri bildirim (ACK/NACK)
                 if success:
-                    # Başarılı ise ACK gönder
                     conn.sendall(f"ACK:{msg.dst}:{msg.payload}\n".encode("utf-8"))
                 else:
-                    # Başarısız ise Hata/Blok kodu gönder
                     conn.sendall(f"ERR:{msg.dst}:{status_code}\n".encode("utf-8"))
 
             except json.JSONDecodeError:
