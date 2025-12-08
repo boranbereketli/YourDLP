@@ -6,7 +6,7 @@ import socket
 import time
 import os
 import json
-import csv  # <-- CSV kütüphanesi eklendi
+import csv 
 
 # Harici kütüphaneniz
 from YOUR_DLP_LIB import (
@@ -63,11 +63,9 @@ def load_policies():
 load_policies()
 
 # ============================================================
-# LOGGING (GÜNCELLENDİ: Güvenli CSV Yazma)
+# LOGGING
 # ============================================================
 def log_incident(event_type, data_type, action, details):
-    # --- CSV KAYDI (DÜZELTİLDİ) ---
-    # csv.writer kullanarak virgül içeren verilerin CSV'yi bozmasını engelliyoruz.
     try:
         file_exists = os.path.exists(LOG_CSV)
         with open(LOG_CSV, "a", newline="", encoding="utf-8") as f:
@@ -99,7 +97,6 @@ def log_incident(event_type, data_type, action, details):
         color = Colors.WARNING
         icon = "⚠️"
 
-    # Konsolda detaylar çok uzunsa kırpabiliriz
     safe_details = (details[:75] + '..') if len(details) > 75 else details
     print(f"{color}[{timestamp}] {icon} {event_type} | {data_type} | {action} -> {safe_details}{Colors.ENDC}")
 

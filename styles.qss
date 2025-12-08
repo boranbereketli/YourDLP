@@ -138,3 +138,30 @@ QPushButton { background-color: #0078d7; }
     padding: 12px 20px; 
     font-size: 14px;
 }
+
+QTableWidget {
+    background-color: white;
+    border: 1px solid #dcdcdc;
+    gridline-color: #eeeeee; /* Hücre çizgileri */
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    selection-background-color: #0078d7; /* Seçili satır rengi */
+    selection-color: white;
+}
+
+/* Tablo Başlıkları */
+QHeaderView::section {
+    background-color: #f0f0f0;
+    padding: 8px;
+    border: none;
+    border-bottom: 2px solid #dcdcdc;
+    font-weight: bold;
+    color: #444;
+    font-size: 13px;
+}
+
+/* Tablo Sol Köşedeki Boşluk */
+QTableCornerButton::section {
+    background-color: #f0f0f0;
+    border: none;
+}

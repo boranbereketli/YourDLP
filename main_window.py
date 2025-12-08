@@ -14,59 +14,94 @@ SERVER = "http://127.0.0.1:5000"
 DATA_TYPES = ["TCKN", "IBAN_TR", "KREDI_KARTI", "E_POSTA", "TEL_NO"]
 
 # =====================================================
-# YENİ EKLENEN SINIF: LOG GÖRÜNTÜLEYİCİ
+# LOG VIEWER DIALOG
 # =====================================================
+# main_window.py içindeki LogViewerDialog sınıfını bununla güncelle:
+
 class LogViewerDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Sistem Logları ve İhlaller")
         self.resize(1100, 600)
-        self.setStyleSheet("""
-            QDialog { background-color: #f4f6f9; }
-            QTableWidget {
-                background-color: white;
-                border: 1px solid #dcdcdc;
-                gridline-color: #eee;
-                font-family: 'Segoe UI';
-                font-size: 13px;
-            }
-            QHeaderView::section {
-                background-color: #e0e0e0;
-                padding: 5px;
-                border: none;
-                font-weight: bold;
-                color: #333;
-            }
-        """)
+        
+        # Sadece Layout ve Pencere Rengi ayarı burada kalabilir
+        # (veya bunu da QDialog olarak styles.qss'e taşıyabilirsin)
+        self.setStyleSheet("background-color: #f4f6f9;") 
         
         layout = QVBoxLayout(self)
         
-        # Üst Başlık
+        # Bilgi Etiketi
         lbl_info = QLabel("🔎 Aşağıda sistemde gerçekleşen tüm DLP olayları ve engellemeler listelenmektedir.")
-        lbl_info.setStyleSheet("color: #555; font-size: 14px; margin-bottom: 5px;")
+        lbl_info.setStyleSheet("color: #555; font-size: 14px; margin-bottom: 5px; font-weight: bold;")
         layout.addWidget(lbl_info)
 
-        # Tablo
+        # Tablo (Artık stili styles.qss'ten alacak)
         self.table = QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["Tarih", "Olay Tipi", "Veri Tipi", "Aksiyon", "Detay"])
         
-        # Sütun genişlikleri
-        self.table.setColumnWidth(0, 150) # Tarih
-        self.table.setColumnWidth(1, 150) # Olay
-        self.table.setColumnWidth(2, 120) # Veri
-        self.table.setColumnWidth(3, 200) # Aksiyon
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch) # Detay
+        # Tablo ayarları (Görünüm değil, davranış ayarları)
+        self.table.setAlternatingRowColors(True) # Satırları bir gri bir beyaz yapar
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows) # Tıklayınca tüm satırı seç
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers) # Düzenlemeyi kapat
+        
+        # Sütun Genişlikleri
+        self.table.setColumnWidth(0, 150)
+        self.table.setColumnWidth(1, 150)
+        self.table.setColumnWidth(2, 120)
+        self.table.setColumnWidth(3, 200)
+        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         
         layout.addWidget(self.table)
         
         # Kapat Butonu
         btn_close = QPushButton("Kapat")
-        btn_close.setStyleSheet("background-color: #555; color: white; padding: 8px 15px; border-radius: 4px;")
+        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Buton stili zaten styles.qss'te tanımlı (QPushButton) o yüzden ekstra koda gerek yok
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
         
         self.load_logs()
+
+    def load_logs(self):
+        self.table.setRowCount(0)
+        try:
+            # Serverdan veriyi çek
+            r = requests.get(f"{SERVER}/all_logs", timeout=3)
+            if r.status_code == 200:
+                data = r.json()
+                logs = data.get("logs", [])
+                
+                self.table.setRowCount(len(logs))
+                for row_idx, log in enumerate(logs):
+                    items = [
+                        log.get("Tarih", ""),
+                        log.get("Olay_Tipi", ""),
+                        log.get("Veri_Tipi", ""),
+                        log.get("Aksiyon", ""),
+                        log.get("Detay", "")
+                    ]
+                    
+                    for col_idx, text in enumerate(items):
+                        item = QTableWidgetItem(str(text))
+                        
+                        if "ENGEL" in items[3]:  
+                            item.setBackground(QColor("#ffebee")) # Açık Kırmızı Arkaplan
+                            if col_idx == 3: 
+                                item.setForeground(QColor("#c62828")) # Koyu Kırmızı Yazı
+                                item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                                
+                        elif "İZİN" in items[3]:
+                            item.setBackground(QColor("#e8f5e9")) # Açık Yeşil Arkaplan
+                            if col_idx == 3: 
+                                item.setForeground(QColor("#2e7d32")) # Koyu Yeşil Yazı
+                                item.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+                        
+                        self.table.setItem(row_idx, col_idx, item)
+            else:
+                QMessageBox.warning(self, "Hata", "Loglar sunucudan alınamadı.")
+        except Exception as e:
+            QMessageBox.critical(self, "Bağlantı Hatası", f"Sunucuya bağlanılamadı: {str(e)}")
 
     def load_logs(self):
         self.table.setRowCount(0)
@@ -174,13 +209,12 @@ class MainWindow(QMainWindow):
         header_lay.addLayout(title_lay)
         header_lay.addStretch()
 
-        # --- YENİ EKLENEN BUTON: LOG KAYITLARI ---
+        # Log Butonu (Turuncu)
         btn_logs = QPushButton("📜 Log Kayıtları")
         btn_logs.setStyleSheet("background-color: #f57f17; margin-right: 10px;") # Turuncu
         btn_logs.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_logs.clicked.connect(self.open_logs)
         header_lay.addWidget(btn_logs)
-        # ----------------------------------------
 
         # Yenile Butonu (Gri ton)
         btn_refresh = QPushButton("🔄 Yenile")
@@ -239,7 +273,7 @@ class MainWindow(QMainWindow):
         self.load_existing_users()
 
     # =====================================================
-    # MANTIK (LOGIC)
+    # LOGIC
     # =====================================================
     def load_existing_users(self):
         """Sunucudaki kullanıcıları çeker ve listeler."""
@@ -363,7 +397,6 @@ class MainWindow(QMainWindow):
         self.policy_win = PolicyWindow(vm_id)
         self.policy_win.show()
 
-    # --- YENİ EKLENEN FONKSİYON: LOG PENCERESİNİ AÇ ---
     def open_logs(self):
         """Log görüntüleme penceresini açar."""
         dialog = LogViewerDialog(self)
