@@ -117,3 +117,5 @@ Date,Event_Type,Data_Type,Action,Details
 2025-12-17 18:59:23,Network,Error,ERROR,vm_user_1->vm_user_2 (Recipient Offline)
 2025-12-17 19:00:52,Clipboard,KEYWORD,BLOCK,User: vm_user_1 | 
 2025-12-17 19:01:01,Clipboard,KEYWORD,BLOCK,User: vm_user_1 | 
+2025-12-17 19:47:39,Network,Error,ERROR,vm_user_1->vm_user_3 (Recipient Offline)
+2025-12-17 19:52:19,Network,Error,ERROR,vm_user_1->vm_user_2 (Recipient Offline)

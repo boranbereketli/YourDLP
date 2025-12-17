@@ -11,7 +11,7 @@ from policy_window import PolicyWindow
 
 SERVER = "http://127.0.0.1:5000"
 
-DATA_TYPES = ["SSN", "IBAN_TR", "CREDIT_CARD", "E_MAIL", "PHONE_NO"]
+DATA_TYPES = ["TCKN", "IBAN_TR", "CREDIT_CARD", "E_MAIL", "PHONE_NO"]
 
 # =====================================================
 # LOG VIEWER DIALOG
@@ -296,17 +296,19 @@ class MainWindow(QMainWindow):
     def add_user(self):
         dialog = AddUserDialog(self)
         if dialog.exec():
-            vm_id, ip, port, name = dialog.get_data()
+            vm_id, ip = dialog.get_data()
+            
             if not vm_id:
-                QMessageBox.warning(self, "Error", "VM ID is required.")
+                QMessageBox.warning(self, "Warning", "Please enter a valid VM ID.")
                 return
             
-            item = QListWidgetItem(f"👤  {vm_id}  |  {name}  |  {ip}:{port}")
+            item = QListWidgetItem(f"👤  {vm_id}  |  IP: {ip}")
             item.setData(Qt.ItemDataRole.UserRole, {
-                "vm_id": vm_id, "ip": ip, "port": port, "name": name
+                "vm_id": vm_id, 
+                "ip": ip
             })
             self.user_list.addItem(item)
-            
+    
             self.create_default_policy(vm_id)
             self.load_existing_users()
 

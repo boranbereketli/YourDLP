@@ -22,15 +22,15 @@ LOG_CSV = "dlp_incidents.csv"
 QUARANTINE_DIR = "QUARANTINE_AREA"
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_EXT = {".txt", ".csv", ".docx", ".pdf", ".xlsx", ".xls", ".pptx"}
-DLP_SCAN_ORDER = ["SSN", "PHONE_NO", "IBAN_TR", "CREDIT_CARD", "E_MAIL"]
+DLP_SCAN_ORDER = ["TCKN", "PHONE_NO", "IBAN_TR", "CREDIT_CARD", "E_MAIL"]
 
 # ------------------------------------------------------------
 # Regex Patterns (Pre-compiled for performance)
 # ------------------------------------------------------------
 # 🚨 IMPORTANT: \b (word boundary) characters were removed for partial detection (substring matching)!
 
-# SSN (TCKN): Searches only for 11 consecutive digits.
-REGEX_SSN = re.compile(r'\d{11}') 
+# TCKN: Searches only for 11 consecutive digits.
+REGEX_TCKN = re.compile(r'\d{11}') 
 
 # PHONE_NO: Remains the same, no \b needed.
 REGEX_TEL = re.compile(r'(?:(?:\+90|0)?5\d{9})')
@@ -49,7 +49,7 @@ REGEX_IBAN = re.compile(r'TR\d{2}[A-Z0-9]{4}\s?(?:\d{4}\s?){4}\d{2}')
 # DLP_RULES Dictionary
 # ------------------------------------------------------------
 DLP_RULES = {
-    "SSN": {"pattern": REGEX_SSN, "description": "11-Digit Turkish Identity Number"},
+    "TCKN": {"pattern": REGEX_TCKN, "description": "11-Digit Turkish Identity Number"},
     "PHONE_NO": {"pattern": REGEX_TEL, "description": "Turkish Phone Number"},
     "CREDIT_CARD": {"pattern": REGEX_CC, "description": "16-Digit Credit Card Number Format"},
     "E_MAIL": {"pattern": REGEX_EMAIL, "description": "Email Address Format"},
@@ -172,37 +172,37 @@ def scan_content(content: str, dynamic_keywords: list = None):
     # --- 2) REGEX AND NUMERIC SCANNING (Including Partial Detection) ---
     text_for_phone_no = list(full_text)
     
-    # A) SSN Detection (Aggressive search for 11-digit blocks)
+    # A) TCKN Detection (Aggressive search for 11-digit blocks)
     
     # Searches for 11 or more consecutive digit sequences
-    ssn_candidate_pattern = re.compile(r'\d{11,}') 
-    ssn_matches = set()
+    tckn_candidate_pattern = re.compile(r'\d{11,}') 
+    tckn_matches = set()
     
-    # Sliding window check for SSN
-    for mo in ssn_candidate_pattern.finditer(full_text):
+    # Sliding window check for TCKN
+    for mo in tckn_candidate_pattern.finditer(full_text):
         full_match = mo.group(0)
         # Check all 11-digit sub-sequences (sliding window)
         for i in range(len(full_match) - 10):
             cand = full_match[i:i+11]
             if is_valid_tckn(cand):
-                ssn_matches.add(cand)
+                tckn_matches.add(cand)
                 
-                # Replace validated SSNs with spaces to exclude them from phone scanning.
+                # Replace validated TCKNs with spaces to exclude them from phone scanning.
                 start_index = mo.span()[0] + i 
                 for j in range(11):
                     idx = start_index + j
                     if 0 <= idx < len(text_for_phone_no):
                         text_for_phone_no[idx] = " "
     
-    # Add SSN Incidents
-    rule_ssn = DLP_RULES["SSN"]
-    for cand in sorted(list(ssn_matches)):
-        masked = f"SSN: ******{cand[-4:]}"
-        incidents.append({"data_type": "SSN", "description": rule_ssn["description"], "masked_match": masked})
+    # Add TCKN Incidents
+    rule_tckn = DLP_RULES["TCKN"]
+    for cand in sorted(list(tckn_matches)):
+        masked = f"TCKN: ******{cand[-4:]}"
+        incidents.append({"data_type": "TCKN", "description": rule_tckn["description"], "masked_match": masked})
 
     text_for_phone_no = "".join(text_for_phone_no) # Text ready for phone scanning
 
-    # B) Phone Numbers (Searching on text where SSNs were removed)
+    # B) Phone Numbers (Searching on text where TCKNs were removed)
     rule_tel = DLP_RULES["PHONE_NO"]
     try: tel_matches = re.findall(rule_tel["pattern"], text_for_phone_no)
     except Exception: tel_matches = []
@@ -215,7 +215,7 @@ def scan_content(content: str, dynamic_keywords: list = None):
 
     # C) Other rules (IBAN_TR, CREDIT_CARD, E_MAIL)
     for data_type in DLP_SCAN_ORDER:
-        if data_type in {"SSN", "PHONE_NO"}: continue
+        if data_type in {"TCKN", "PHONE_NO"}: continue
         
         rule = DLP_RULES[data_type]
         # Regexes now catch word parts since they are defined without \b

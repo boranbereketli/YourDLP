@@ -7,7 +7,7 @@ import json
 
 SERVER = "http://127.0.0.1:5000"
 
-DATA_TYPES = ["SSN", "IBAN_TR", "CREDIT_CARD", "EMAIL", "PHONE_NO"]
+DATA_TYPES = ["TCKN", "IBAN_TR", "CREDIT_CARD", "EMAIL", "PHONE_NO"]
 
 
 # ======================================================
@@ -20,7 +20,7 @@ class PolicyTab(QWidget):
         layout = QVBoxLayout()
         self.checks = {}
 
-        # Checkboxes (SSN, IBAN, etc.)
+        # Checkboxes (TCKN, IBAN, etc.)
         for d in DATA_TYPES:
             cb = QCheckBox(d)
             layout.addWidget(cb)
@@ -83,7 +83,7 @@ class PolicyWindow(QWidget):
         self.setMinimumSize(800, 500)
         
         # Data structures
-        self.network_data = {}    # { 'target_vm': {SSN: True...} }
+        self.network_data = {}    # { 'target_vm': {TCKN: True...} }
         self.raw_policy = {}      # Raw data from server
         self.current_target_vm = None # Currently selected target in Network tab
 

@@ -3,9 +3,9 @@
         "clipboard": {
             "TCKN": true,
             "IBAN_TR": true,
-            "KREDI_KARTI": true,
-            "E_POSTA": false,
-            "TEL_NO": false,
+            "CREDIT_CARD": true,
+            "E_MAIL": false,
+            "PHONE": false,
             "Keywords": [
                 "araba",
                 "pilot",
@@ -16,32 +16,32 @@
         "usb": {
             "TCKN": true,
             "IBAN_TR": true,
-            "KREDI_KARTI": true,
-            "E_POSTA": false,
-            "TEL_NO": false,
+            "CREDIT_CARD": true,
+            "E_MAIL": false,
+            "PHONE": false,
             "Keywords": []
         },
         "network": {
             "vm_user_2": {
-                "E_POSTA": false,
+                "E_MAIL": false,
                 "IBAN_TR": true,
-                "KREDI_KARTI": false,
+                "CREDIT_CARD": false,
                 "Keywords": [
                     "domates",
                     "patates"
                 ],
                 "TCKN": true,
-                "TEL_NO": false
+                "PHONE": false
             },
             "vm_user_3": {
-                "E_POSTA": true,
+                "E_MAIL": true,
                 "IBAN_TR": true,
-                "KREDI_KARTI": true,
+                "CREDIT_CARD": true,
                 "Keywords": [
                     "boran"
                 ],
                 "TCKN": true,
-                "TEL_NO": true
+                "PHONE": true
             }
         }
     },
